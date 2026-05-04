@@ -1,3 +1,39 @@
+# Pricely
+
+Production-ready foundation for a new Next.js application.
+
+## Stack
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS v4
+- ESLint 9
+
+## Project Structure
+
+- `app/` route shell and file-based routing entrypoints
+- `src/components/` shared reusable UI
+- `src/features/` feature-scoped logic and UI
+- `src/services/` API/data access layer
+- `src/lib/` shared utilities
+- `src/types/` shared types
+- `src/constants/` shared constants
+- `src/config/` app configuration
+- `src/styles/` token and style foundations
+- `docs/design/` archived design artifacts and design-system contract
+
+## Design Governance
+
+- Enforced contract: `docs/design/design-system-contract.md`
+- Cursor rules: `.cursor/rules/*.mdc`
+- Agent operating guide: `AGENTS.md`
+
+## Commands
+
+- `npm run dev` - start local development server
+- `npm run lint` - run lint checks
+- `npx tsc --noEmit` - run type checks
+- `npm run build` - build production bundle
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

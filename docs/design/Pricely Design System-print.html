@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Pricely · Design System (Print)</title>
+<style>
+  @page { size: A3 landscape; margin: 1cm; }
+  html, body { margin: 0; padding: 0; background: #f0eee9; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+  .page {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 24px 32px 48px;
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: #f0eee9;
+  }
+  .page:last-child { break-after: auto; page-break-after: auto; }
+  .page-head { margin-bottom: 14px; }
+  .page-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(40,30,20,0.55); }
+  .page-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 22px; font-weight: 600; letter-spacing: -0.5px; color: #2a251f; margin-top: 4px; }
+  .page-sub { font-size: 12.5px; color: rgba(60,50,40,0.65); margin-top: 4px; }
+  .grid {
+    display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;
+  }
+  .ab { display: flex; flex-direction: column; gap: 6px; break-inside: avoid; page-break-inside: avoid; }
+  .ab-label { font-size: 12px; font-weight: 500; color: rgba(60,50,40,0.7); padding-left: 2px; }
+  .ab-frame { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06); overflow: hidden; }
+  .footer { position: fixed; bottom: 0.4cm; left: 1cm; right: 1cm; display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: rgba(40,30,20,0.5); letter-spacing: 1px; text-transform: uppercase; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="tokens.jsx"></script>
+<script type="text/babel" src="brand.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="mobile.jsx"></script>
+<script type="text/babel" src="desktop.jsx"></script>
+<script type="text/babel" src="reference.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+// Print page wrapper — each <Page> is one printed page.
+// Artboards are rendered at native size, then visually scaled (transform: scale)
+// to fit the A3-landscape canvas. We reserve a wrapper of scaled dimensions so
+// the page flow matches what you see.
+
+function Scaled({ width, height, scale = 1, children }) {
+  return (
+    <div style={{ width: width * scale, height: height * scale, position: 'relative', flexShrink: 0 }}>
+      <div style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left', position: 'absolute', top: 0, left: 0 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function AB({ label, w, h, scale = 1, children }) {
+  return (
+    <div className="ab">
+      <div className="ab-label">{label}</div>
+      <div className="ab-frame" style={{ width: w * scale, height: h * scale }}>
+        <Scaled width={w} height={h} scale={scale}>{children}</Scaled>
+      </div>
+    </div>
+  );
+}
+
+function Page({ eyebrow, title, sub, children }) {
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div className="page-eyebrow">{eyebrow}</div>
+        <div className="page-title">{title}</div>
+        {sub && <div className="page-sub">{sub}</div>}
+      </div>
+      <div className="grid">{children}</div>
+    </div>
+  );
+}
+
+const Phone = ({ mode, children }) => (
+  <IOSDevice width={402} height={874} dark={mode === 'dark'}>
+    {children}
+  </IOSDevice>
+);
+
+function PrintDeck() {
+  return (
+    <>
+      {/* Cover */}
+      <div className="page" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 'calc(297mm - 2cm)', background: PRICELY_FX.voidDark, color: '#F4F4F6', padding: '48px 56px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <PricelyMarkA size={48} mode="dark"/>
+          <PricelyWordmarkA color="#F4F4F6"/>
+        </div>
+        <div>
+          <div style={{ fontFamily: PRICELY_TYPE.display, fontWeight: 600, fontSize: 84, letterSpacing: -3, lineHeight: 0.96, maxWidth: 900 }}>
+            Find the cheapest, fastest{' '}
+            <span style={{ background: PRICELY_FX.rampAccent, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>everything.</span>
+          </div>
+          <div style={{ marginTop: 28, fontSize: 18, color: 'rgba(244,244,246,0.7)', maxWidth: 720, lineHeight: 1.5 }}>
+            A real-time price comparison & decision engine. India-first, mobile-first. Premium graphite glass over warm coral→magenta light.
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontFamily: PRICELY_TYPE.mono, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: 'rgba(244,244,246,0.5)' }}>
+          <span>Design System · v0.1 · Mid-fi</span>
+          <span>INR · India</span>
+        </div>
+      </div>
+
+      <Page eyebrow="01 · Brand" title="Wordmark exploration" sub="Three directions; Direction A is wired in by default.">
+        <AB label="Brand · dark" w={840} h={520} scale={0.5}><RefBrand mode="dark"/></AB>
+        <AB label="Brand · light" w={840} h={520} scale={0.5}><RefBrand mode="light"/></AB>
+      </Page>
+
+      <Page eyebrow="02 · Tokens" title="Color, type, surfaces" sub="Dark hero, warm light counterpart. Coral→magenta accent ramp.">
+        <AB label="Colors · dark" w={720} h={520} scale={0.55}><RefColors mode="dark"/></AB>
+        <AB label="Colors · light" w={720} h={520} scale={0.55}><RefColors mode="light"/></AB>
+      </Page>
+
+      <Page eyebrow="03 · Tokens" title="Type & glass" sub="Display / Text / Mono · liquid-glass surfaces, blur scale, radius.">
+        <AB label="Type scale" w={720} h={520} scale={0.55}><RefType mode="dark"/></AB>
+        <AB label="Liquid glass · radius · blur" w={720} h={520} scale={0.55}><RefSurfaces mode="dark"/></AB>
+      </Page>
+
+      <Page eyebrow="04 · Components" title="UI library" sub="14 atoms · search, pills, result cards, prices, badges, verdicts, CTAs.">
+        <AB label="Components · dark" w={840} h={620} scale={0.5}><RefComponents mode="dark"/></AB>
+        <AB label="Components · light" w={840} h={620} scale={0.5}><RefComponents mode="light"/></AB>
+      </Page>
+
+      <Page eyebrow="05 · Mobile" title="Mobile · dark (hero)" sub="iPhone-class device frame · bottom-tab navigation · sticky CTA.">
+        <AB label="01 · Home" w={402} h={874} scale={0.36}><Phone mode="dark"><MHome mode="dark"/></Phone></AB>
+        <AB label="02 · Results" w={402} h={874} scale={0.36}><Phone mode="dark"><MResults mode="dark"/></Phone></AB>
+        <AB label="03 · Detail" w={402} h={874} scale={0.36}><Phone mode="dark"><MDetail mode="dark"/></Phone></AB>
+        <AB label="04 · Cab fare" w={402} h={874} scale={0.36}><Phone mode="dark"><MCab mode="dark"/></Phone></AB>
+        <AB label="05 · Watchlist" w={402} h={874} scale={0.36}><Phone mode="dark"><MWatchlist mode="dark"/></Phone></AB>
+      </Page>
+
+      <Page eyebrow="06 · Mobile" title="Mobile · light" sub="Same product, frosted warm-gray surfaces.">
+        <AB label="01 · Home" w={402} h={874} scale={0.36}><Phone mode="light"><MHome mode="light"/></Phone></AB>
+        <AB label="02 · Results" w={402} h={874} scale={0.36}><Phone mode="light"><MResults mode="light"/></Phone></AB>
+        <AB label="03 · Detail" w={402} h={874} scale={0.36}><Phone mode="light"><MDetail mode="light"/></Phone></AB>
+        <AB label="04 · Cab fare" w={402} h={874} scale={0.36}><Phone mode="light"><MCab mode="light"/></Phone></AB>
+        <AB label="05 · Watchlist" w={402} h={874} scale={0.36}><Phone mode="light"><MWatchlist mode="light"/></Phone></AB>
+      </Page>
+
+      <Page eyebrow="07 · Desktop · dark" title="Search results" sub="Product-first web app · 1440 wide · side nav, dense compare grid.">
+        <AB label="Search results" w={1440} h={900} scale={0.55}><DResults mode="dark"/></AB>
+      </Page>
+      <Page eyebrow="08 · Desktop · dark" title="Product detail">
+        <AB label="Product detail · price history" w={1440} h={900} scale={0.55}><DDetail mode="dark"/></AB>
+      </Page>
+      <Page eyebrow="09 · Desktop · dark" title="Cab fare compare">
+        <AB label="Cab fare compare" w={1440} h={900} scale={0.55}><DCab mode="dark"/></AB>
+      </Page>
+
+      <Page eyebrow="10 · Desktop · light" title="Search results">
+        <AB label="Search results" w={1440} h={900} scale={0.55}><DResults mode="light"/></AB>
+      </Page>
+      <Page eyebrow="11 · Desktop · light" title="Product detail">
+        <AB label="Product detail" w={1440} h={900} scale={0.55}><DDetail mode="light"/></AB>
+      </Page>
+      <Page eyebrow="12 · Desktop · light" title="Cab fare compare">
+        <AB label="Cab fare compare" w={1440} h={900} scale={0.55}><DCab mode="light"/></AB>
+      </Page>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<PrintDeck/>);
+
+// Auto-print: wait for fonts + a settle delay
+(async () => {
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+  setTimeout(() => { window.print(); }, 1200);
+})();
+</script>
+</body>
+</html>

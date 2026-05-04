@@ -1,0 +1,20 @@
+# Frontend UI Rules
+
+## Component Standards
+- Build shared primitives in `src/components/ui`.
+- Keep feature-specific widgets inside `src/features/<feature>/components`.
+- Prefer composition over deep prop drilling.
+
+## State and Accessibility
+- Every interactive element must provide visible focus styles.
+- Support keyboard interaction and semantic attributes.
+- Meet minimum target size for touch interactions (44x44).
+
+## Styling Discipline
+- Use design tokens via CSS variables.
+- Keep utility classes readable and intention-revealing.
+- Do not duplicate style recipes across components.
+
+## Route Layer Discipline
+- Keep `app/*/page.tsx` focused on composition only.
+- Move data and behavior logic to feature/services layers.

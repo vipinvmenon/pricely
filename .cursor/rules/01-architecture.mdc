@@ -1,0 +1,26 @@
+# Architecture Rules
+
+## Directory Boundaries
+- `app/`: route segments, layouts, route handlers only.
+- `src/features/*`: feature-specific UI + orchestration logic.
+- `src/components/*`: shared reusable components only.
+- `src/services/*`: API/data access boundaries.
+- `src/lib/*`: shared pure utilities (no feature coupling).
+- `src/types/*`: shared types.
+- `src/config/*`: runtime/static app config.
+- `src/constants/*`: constant maps and enums.
+
+## Dependency Direction
+- `app` -> `src/features` and `src/components`.
+- `src/features` -> `src/components`, `src/services`, `src/lib`, `src/types`, `src/constants`.
+- `src/components` must not import from `src/features`.
+- `src/lib` must not import from `src/features` or `src/components`.
+
+## Implementation Constraints
+- Prefer feature colocation for business logic.
+- Keep pages thin; push logic into `src/features`.
+- Avoid duplicate utilities; consolidate in `src/lib`.
+
+## Import Conventions
+- Use `@/*` alias (mapped to `src/*`) for all internal imports.
+- Keep relative imports local within same folder subtree.

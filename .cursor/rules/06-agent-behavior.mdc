@@ -1,0 +1,20 @@
+# Agent Behavior
+
+## Execution Model
+- Audit first, then implement.
+- Remove dead/obsolete code before introducing new files.
+- Keep changes small, explicit, and aligned with architecture rules.
+
+## Editing Policy
+- Do not edit unrelated files.
+- Do not introduce temporary scaffolds that remain unused.
+- Prefer reusable shared modules before duplication.
+
+## Verification Policy
+- Run lint, typecheck, and build after substantive edits.
+- Fix introduced issues before finalizing.
+- Summarize changes in terms of removed, reorganized, and enforced standards.
+
+## Safety
+- Avoid destructive git operations unless explicitly requested.
+- Preserve user-authored work that is outside requested scope.

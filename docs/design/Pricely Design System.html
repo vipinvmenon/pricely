@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pricely · Design System</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #f0eee9; overflow: hidden; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="tokens.jsx"></script>
+<script type="text/babel" src="brand.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="mobile.jsx"></script>
+<script type="text/babel" src="desktop.jsx"></script>
+<script type="text/babel" src="reference.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const PRICELY_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "showLightVariants": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const [tweaks, setTweak] = useTweaks(PRICELY_DEFAULTS);
+
+  // Helper: an artboard sized to the iOS frame
+  const Phone = ({ mode, children }) => (
+    <IOSDevice width={402} height={874} dark={mode === 'dark'}>
+      {children}
+    </IOSDevice>
+  );
+
+  return (
+    <>
+      <DesignCanvas>
+        {/* ─── PHILOSOPHY ─── */}
+        <DCSection id="intro" title="Pricely · A real-time price comparison & decision engine"
+          subtitle="India-first. Mobile-first. Premium graphite glass with Spotify-green accents. Dark is the hero, light is a tweak.">
+          <DCArtboard id="poster" label="Hero poster" width={840} height={520}>
+            <div style={{
+              width: '100%', height: '100%', padding: 48, boxSizing: 'border-box',
+              background: PRICELY_FX.voidDark, color: '#F4F4F6',
+              fontFamily: PRICELY_TYPE.text, position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <PricelyMarkB size={40}/>
+                <PricelyWordmarkA color="#F4F4F6"/>
+              </div>
+              <div style={{ marginTop: 56, fontFamily: PRICELY_TYPE.display, fontWeight: 600, fontSize: 64, letterSpacing: -2.4, lineHeight: 0.98, maxWidth: 700, textWrap: 'pretty' }}>
+                Find the cheapest, fastest{' '}
+                <span style={{ background: PRICELY_FX.rampAccent, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>everything.</span>
+              </div>
+              <div style={{ marginTop: 28, fontSize: 16, color: 'rgba(244,244,246,0.65)', maxWidth: 520, lineHeight: 1.5 }}>
+                Pricely compares groceries, electronics, fashion, food and cab fares across every Indian commerce app — in real time, with a price-history-aware buy/wait verdict.
+              </div>
+              <div style={{ position: 'absolute', right: 48, bottom: 48, display: 'flex', gap: 14 }}>
+                {['zip','bolt','aisle','kart','vogue','drift'].map(p => <PPlatformLogo key={p} id={p} size={40}/>)}
+              </div>
+              <div style={{ position: 'absolute', left: 48, bottom: 48, fontFamily: PRICELY_TYPE.mono, fontSize: 11, color: 'rgba(244,244,246,0.5)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                v0.1 · Mid-fi system · INR · {new Date().toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+              </div>
+            </div>
+          </DCArtboard>
+
+          <DCArtboard id="principles" label="Design principles" width={520} height={520}>
+            <div style={{ width: '100%', height: '100%', padding: 36, boxSizing: 'border-box',
+              background: '#FBFAF7', color: '#14120F', fontFamily: PRICELY_TYPE.text }}>
+              <div style={{ fontFamily: PRICELY_TYPE.mono, fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: 'rgba(20,18,15,0.5)' }}>Five principles</div>
+              <div style={{ fontFamily: PRICELY_TYPE.display, fontSize: 28, fontWeight: 600, letterSpacing: -0.8, marginTop: 6, marginBottom: 24 }}>How Pricely feels</div>
+              {[
+                ['01 Calm clarity', 'Comparison is anxious by nature. We answer "should I buy" in one glance, not five.'],
+                ['02 Fluent in money', 'Mono numerals, tabular alignment. Prices feel like data, not marketing.'],
+                ['03 Glass with intent', 'Blur signals layered context. Never decoration.'],
+                ['04 Honest urgency', 'Green accents only for actions and savings — never noise.'],
+                ['05 India-native', '₹, lakh-scale prices, hyperlocal ETAs, cab apps treated as first-class.'],
+              ].map(([h, b]) => (
+                <div key={h} style={{ padding: '14px 0', borderTop: '1px solid rgba(20,18,15,0.08)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: -0.2 }}>{h}</div>
+                  <div style={{ fontSize: 12.5, color: 'rgba(20,18,15,0.62)', marginTop: 4, lineHeight: 1.5 }}>{b}</div>
+                </div>
+              ))}
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ─── BRAND ─── */}
+        <DCSection id="brand" title="Brand · 3 wordmark directions"
+          subtitle="Pick one — the rest of the system holds either way. Direction A is wired in by default.">
+          <DCArtboard id="wordmarks" label="Wordmark explorations" width={840} height={520}>
+            <RefBrand mode="dark"/>
+          </DCArtboard>
+          <DCArtboard id="wordmarks-l" label="Wordmarks · light" width={840} height={520}>
+            <RefBrand mode="light"/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ─── COLOR + TYPE + SURFACES ─── */}
+        <DCSection id="tokens" title="Tokens · color, type, surfaces"
+          subtitle="Dark is hero. Spotify-green accent ramp. Mono numerals for prices.">
+          <DCArtboard id="colors-d" label="Colors · dark" width={720} height={520}>
+            <RefColors mode="dark"/>
+          </DCArtboard>
+          <DCArtboard id="colors-l" label="Colors · light" width={720} height={520}>
+            <RefColors mode="light"/>
+          </DCArtboard>
+          <DCArtboard id="type" label="Type scale" width={720} height={520}>
+            <RefType mode="dark"/>
+          </DCArtboard>
+          <DCArtboard id="surfaces" label="Liquid glass · radius · blur" width={720} height={520}>
+            <RefSurfaces mode="dark"/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ─── COMPONENTS ─── */}
+        <DCSection id="components" title="Components · 14 atoms"
+          subtitle="Search, platform pills, result cards, prices, badges, verdicts, CTAs.">
+          <DCArtboard id="components-d" label="Library · dark" width={840} height={620}>
+            <RefComponents mode="dark"/>
+          </DCArtboard>
+          <DCArtboard id="components-l" label="Library · light" width={840} height={620}>
+            <RefComponents mode="light"/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ─── MOBILE — DARK ─── */}
+        <DCSection id="mobile-dark" title="Mobile · dark (hero)"
+          subtitle="iPhone-class device frame. Bottom-tab navigation, sticky CTA, thumb-first compare.">
+          <DCArtboard id="m-home" label="01 · Home / Search-first" width={402} height={874}><Phone mode="dark"><MHome mode="dark"/></Phone></DCArtboard>
+          <DCArtboard id="m-results" label="02 · Results · grocery" width={402} height={874}><Phone mode="dark"><MResults mode="dark"/></Phone></DCArtboard>
+          <DCArtboard id="m-detail" label="03 · Detail · price history" width={402} height={874}><Phone mode="dark"><MDetail mode="dark"/></Phone></DCArtboard>
+          <DCArtboard id="m-cab" label="04 · Cab fare compare" width={402} height={874}><Phone mode="dark"><MCab mode="dark"/></Phone></DCArtboard>
+          <DCArtboard id="m-watch" label="05 · Watchlist + alerts" width={402} height={874}><Phone mode="dark"><MWatchlist mode="dark"/></Phone></DCArtboard>
+        </DCSection>
+
+        {/* ─── MOBILE — LIGHT ─── */}
+        <DCSection id="mobile-light" title="Mobile · light"
+          subtitle="Same product, frosted warm-gray surfaces. Note how the green accent stays the only saturated color.">
+          <DCArtboard id="m-home-l" label="01 · Home" width={402} height={874}><Phone mode="light"><MHome mode="light"/></Phone></DCArtboard>
+          <DCArtboard id="m-results-l" label="02 · Results" width={402} height={874}><Phone mode="light"><MResults mode="light"/></Phone></DCArtboard>
+          <DCArtboard id="m-detail-l" label="03 · Detail" width={402} height={874}><Phone mode="light"><MDetail mode="light"/></Phone></DCArtboard>
+          <DCArtboard id="m-cab-l" label="04 · Cab" width={402} height={874}><Phone mode="light"><MCab mode="light"/></Phone></DCArtboard>
+          <DCArtboard id="m-watch-l" label="05 · Watchlist" width={402} height={874}><Phone mode="light"><MWatchlist mode="light"/></Phone></DCArtboard>
+        </DCSection>
+
+        {/* ─── DESKTOP — DARK ─── */}
+        <DCSection id="desktop-dark" title="Desktop · dark"
+          subtitle="Product-first, not marketing-first. 1440 wide. Side nav, dense compare grid, real chart.">
+          <DCArtboard id="d-results" label="01 · Search results" width={1440} height={900}><DResults mode="dark"/></DCArtboard>
+          <DCArtboard id="d-detail" label="02 · Product detail" width={1440} height={900}><DDetail mode="dark"/></DCArtboard>
+          <DCArtboard id="d-cab" label="03 · Cab fare compare" width={1440} height={900}><DCab mode="dark"/></DCArtboard>
+        </DCSection>
+
+        {/* ─── DESKTOP — LIGHT ─── */}
+        <DCSection id="desktop-light" title="Desktop · light"
+          subtitle="Same shell, warm light surfaces. Saved as direction option for in-app theming.">
+          <DCArtboard id="d-results-l" label="01 · Search results" width={1440} height={900}><DResults mode="light"/></DCArtboard>
+          <DCArtboard id="d-detail-l" label="02 · Product detail" width={1440} height={900}><DDetail mode="light"/></DCArtboard>
+          <DCArtboard id="d-cab-l" label="03 · Cab fare compare" width={1440} height={900}><DCab mode="light"/></DCArtboard>
+        </DCSection>
+
+        {/* ─── NEXT STEPS ─── */}
+        <DCSection id="notes" title="Notes & next steps">
+          <DCArtboard id="next" label="Roadmap" width={720} height={420}>
+            <div style={{ width: '100%', height: '100%', padding: 36, boxSizing: 'border-box',
+              background: PRICELY_FX.voidDark, color: '#F4F4F6', fontFamily: PRICELY_TYPE.text }}>
+              <div style={{ fontFamily: PRICELY_TYPE.mono, fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: 'rgba(244,244,246,0.5)' }}>What to build next</div>
+              <div style={{ fontFamily: PRICELY_TYPE.display, fontSize: 28, fontWeight: 600, letterSpacing: -0.8, marginTop: 6, marginBottom: 22 }}>Open threads</div>
+              {[
+                ['Hi-fi pass on hero screens', 'Real product imagery, real iconography, real motion specs (search→results, sticky compare sheet, chart hover).'],
+                ['Notification center + alert flow', 'Inbox screen, push templates, silent vs urgent tiers.'],
+                ['Empty / loading / error states', 'Shimmer recipes, "no results" tone, retry behaviour.'],
+                ['Onboarding (3-step)', 'City permission, watchlist seed, first comparison demo.'],
+                ['Settings / profile / payment', 'Linked accounts (cab apps, ecom), savings dashboard, export.'],
+                ['Web landing page', 'Separate from product UI — but using same tokens.'],
+              ].map(([h, b]) => (
+                <div key={h} style={{ padding: '12px 0', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, letterSpacing: -0.2 }}>{h}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(244,244,246,0.62)', marginTop: 3, lineHeight: 1.5 }}>{b}</div>
+                </div>
+              ))}
+            </div>
+          </DCArtboard>
+          <DCPostIt top={40} left={780} rotate={-3} width={200}>
+            Made-up platform names + abstracted logos used throughout — swap for real brand kits in production.
+          </DCPostIt>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Theme">
+          <TweakToggle
+            label="Show light variants"
+            value={tweaks.showLightVariants}
+            onChange={(v) => setTweak('showLightVariants', v)}
+          />
+          <div style={{ fontSize: 11, color: 'rgba(40,30,20,0.55)', marginTop: 6, lineHeight: 1.5 }}>
+            Both dark + light sections always render so reviewers can compare them side-by-side.
+          </div>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

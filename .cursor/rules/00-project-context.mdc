@@ -1,0 +1,20 @@
+# Project Context
+
+## Mission
+- This repository is a production foundation for a new Pricely application.
+- Do not build speculative product features unless explicitly requested.
+
+## Current Baseline
+- Framework: Next.js App Router.
+- Source structure: `app/` for routing shell, `src/` for scalable code organization.
+- Design source of truth: `docs/design/` and `docs/design/design-system-contract.md`.
+
+## Required Workflow
+- Audit before modifying files.
+- Remove noise before adding new code.
+- Keep diffs focused, explicit, and reversible.
+
+## Forbidden
+- Reintroducing create-next-app template artifacts.
+- Mixing prototype code from `docs/design/` directly into production runtime.
+- Adding broad abstractions without immediate use.

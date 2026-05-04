@@ -1,0 +1,22 @@
+# Testing Rules
+
+## Minimum Quality Gates
+- Every non-trivial change must pass:
+  - lint
+  - typecheck
+  - build
+
+## Coverage Priorities
+- Prioritize tests for:
+  - feature logic and edge cases
+  - service layer request/response behavior
+  - critical UI states (loading, error, empty, success)
+
+## Test Organization
+- Unit tests under `tests/unit` or colocated near modules.
+- Integration/e2e tests under `tests/e2e`.
+- Keep test names behavior-focused and deterministic.
+
+## Forbidden
+- Merging changes that break existing tests.
+- Adding code paths without at least a validation strategy.

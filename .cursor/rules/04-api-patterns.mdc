@@ -1,0 +1,19 @@
+# API Patterns
+
+## Service Layer Contract
+- Network and data access logic belongs in `src/services`.
+- Components and pages must not call raw `fetch` directly except trivial bootstrap cases.
+- Wrap responses in typed helpers and validate response shape where practical.
+
+## Error Handling
+- Throw explicit errors for non-OK responses.
+- Avoid silent failure branches.
+- Return predictable typed data from service functions.
+
+## Separation Rules
+- Route handlers (`app/api/**/route.ts`) orchestrate request/response only.
+- Business logic should live in feature/service modules, not route files.
+
+## Extensibility
+- Keep service functions small and reusable.
+- Centralize endpoint construction and shared headers/auth in service utilities.

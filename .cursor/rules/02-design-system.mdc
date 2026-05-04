@@ -1,0 +1,20 @@
+# Design System Rules
+
+## Source of Truth
+- Enforce `docs/design/design-system-contract.md`.
+- Treat archived design files as reference artifacts, not runtime code.
+
+## Token Usage
+- Use token variables for spacing, radius, color, typography, and state.
+- Do not hardcode ad hoc values in components unless first added to tokens.
+
+## Canonical Decisions
+- Accent family: green (`#1DB954`, `#1ED760`).
+- Radius scale: `8, 12, 16, 22, 30, pill`.
+- Spacing grid: 4px base and approved steps only.
+- Numeric UI must use mono/tabular numerals.
+
+## UI Behavior
+- Dark theme is primary baseline.
+- Accent use must indicate action/state importance, not decoration.
+- Support keyboard focus and reduced-motion behavior in all new interactive UI.
