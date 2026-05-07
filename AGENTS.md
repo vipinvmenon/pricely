@@ -1,3 +1,9 @@
+# agents.md
+
+This repo's canonical agent operating manual is [`AGENTS.md`](d:\Projects\pricely\AGENTS.md).
+
+This file exists because the rewrite control-document plan references `agents.md` as the master-name. Use `AGENTS.md` as the source of truth.
+
 # AGENTS Operating Manual
 
 This document defines reusable execution workflows for AI agents working in this repository.
@@ -8,6 +14,7 @@ This document defines reusable execution workflows for AI agents working in this
 - Follow `.cursor/rules/*.mdc` before implementation.
 - Keep `app/` routing-focused and `src/` architecture boundaries strict.
 - Do not introduce product features when the task is infrastructure/foundation.
+- Ask the user for explicit approval before running validation commands (`npm run lint`, `npx tsc --noEmit`, `npm run build`).
 
 ## Feature Implementation Workflow
 

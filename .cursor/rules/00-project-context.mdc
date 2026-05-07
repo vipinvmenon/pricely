@@ -1,20 +1,49 @@
+---
+description: Project context, stack baseline, design references, and global workflow rules. Read this first in every session.
+globs: ["**/*"]
+alwaysApply: true
+---
+
 # Project Context
 
-## Mission
-- This repository is a production foundation for a new Pricely application.
-- Do not build speculative product features unless explicitly requested.
+## What This App Is
+Pricely is a real-time price comparison platform for India. It compares:
+- Grocery: Blinkit, Zepto, Swiggy Instamart, BigBasket, DMart Ready
+- Electronics: Flipkart, Amazon, Croma, Reliance Digital, Vijay Sales
+- Cabs: Ola, Uber, Rapido, Namma Yatri, InDrive
 
-## Current Baseline
-- Framework: Next.js App Router.
-- Source structure: `app/` for routing shell, `src/` for scalable code organization.
-- Design source of truth: `docs/design/` and `docs/design/design-system-contract.md`.
+## Stack Baseline
+- Framework: Next.js 16, React 19, TypeScript strict mode
+- Package manager: pnpm
+- Styling: CSS variables (design tokens) + Tailwind utilities
+- Animation: Framer Motion
+- Global state: Zustand (theme, city, auth session only)
+- Client data fetching: SWR with `refreshInterval: 300_000`
+- Input validation: Zod on every API route
+- Auth + Database: Supabase (PostgreSQL + Row Level Security)
+- Cache: Upstash Redis
+- App hosting: Vercel
+- Scraper service: Railway (separate persistent Node process — Playwright cannot run on Vercel)
+
+## Design Sources of Truth
+Read **both** of these before touching any style, component, or layout file:
+1. `docs/design/design-system-contract.md` — enforced engineering contract
+2. `docs/design/pricely-design-system.html` — pixel-level visual reference (open in browser)
+
+These files are never modified during implementation. They are reference artifacts only.
 
 ## Required Workflow
-- Audit before modifying files.
-- Remove noise before adding new code.
+- Audit before modifying. Read a file before editing it.
+- Remove obsolete code before introducing new files.
 - Keep diffs focused, explicit, and reversible.
+- Ask for explicit user approval before running `npm run lint`, `npx tsc --noEmit`, or `npm run build`.
+- Follow phase order: foundation → UI primitives → shell → pages → API contracts → data infra → integrations.
 
 ## Forbidden
-- Reintroducing create-next-app template artifacts.
-- Mixing prototype code from `docs/design/` directly into production runtime.
-- Adding broad abstractions without immediate use.
+- Hardcoded hex color values, spacing values, or radius values in any component or style file.
+- CSS-in-JS or inline `style` objects for anything covered by design tokens.
+- `any` TypeScript type anywhere in the codebase.
+- `@ts-ignore` or `@ts-expect-error` suppressions.
+- Importing Playwright or scraper modules inside `src/app/api/` routes.
+- Mixing prototype code from `docs/design/` directly into production runtime files.
+- Adding abstractions without an immediate, concrete use case.

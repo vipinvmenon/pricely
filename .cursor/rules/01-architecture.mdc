@@ -1,26 +1,69 @@
+---
+description: Folder structure, dependency direction, and implementation constraints for the rewrite architecture.
+globs: ["src/**/*", "app/**/*"]
+alwaysApply: false
+---
+
 # Architecture Rules
 
-## Directory Boundaries
-- `app/`: route segments, layouts, route handlers only.
-- `src/features/*`: feature-specific UI + orchestration logic.
-- `src/components/*`: shared reusable components only.
-- `src/services/*`: API/data access boundaries.
-- `src/lib/*`: shared pure utilities (no feature coupling).
-- `src/types/*`: shared types.
-- `src/config/*`: runtime/static app config.
-- `src/constants/*`: constant maps and enums.
+## Canonical Folder Structure
+```
+src/
+  app/                          ← Next.js App Router (route segments, layouts, API routes)
+    (dashboard)/                ← authenticated shell with DesktopNav + TabBar
+      layout.tsx
+      page.tsx                  ← Home
+      search/[query]/page.tsx
+      product/[id]/page.tsx
+      cabs/page.tsx
+      watchlist/page.tsx
+    api/
+      prices/{grocery,electronics,cabs}/route.ts
+      search/trending/route.ts
+      alerts/route.ts
+      watchlist/route.ts
+      history/[productId]/route.ts
+      cron/check-alerts/route.ts
+    layout.tsx                  ← root: fonts, ThemeProvider, globals
+    globals.css
+  components/
+    ui/                         ← GlassCard, SearchBar, ResultCard, VerdictChip, badges
+    layout/                     ← DesktopNav, TabBar
+    features/                   ← SparkChart, PlatformLogo, PriceAlert, WatchlistButton
+  lib/
+    scrapers/                   ← BaseScraper + per-platform scrapers (Railway only)
+    cache/redis.ts              ← Upstash client + key factories
+    db/supabase.ts              ← Supabase client + query utilities
+    ai/verdict.ts               ← rule-based + optional LLM verdict engine
+    geo/index.ts                ← city detection from request headers
+    utils/
+      format.ts                 ← formatPrice, formatRelativeTime, normalizeQuery
+      platforms.ts              ← PLATFORMS registry (single source of truth)
+  styles/
+    tokens.css                  ← all CSS variables — the only place colors/spacing/radius live
+  types/
+    index.ts                    ← all shared types, single barrel export
+```
 
 ## Dependency Direction
-- `app` -> `src/features` and `src/components`.
-- `src/features` -> `src/components`, `src/services`, `src/lib`, `src/types`, `src/constants`.
-- `src/components` must not import from `src/features`.
-- `src/lib` must not import from `src/features` or `src/components`.
+- `src/app/` imports from `src/components/` and `src/lib/` only.
+- `src/components/features/` imports from `src/components/ui/`, `src/lib/utils/`, `src/types/`.
+- `src/components/ui/` must not import from `src/components/features/` or `src/lib/scrapers/`.
+- `src/lib/` modules must not import from `src/components/` or `src/app/`.
+- `src/types/index.ts` has no internal imports — pure type declarations only.
+- Circular imports are never acceptable.
 
-## Implementation Constraints
-- Prefer feature colocation for business logic.
-- Keep pages thin; push logic into `src/features`.
-- Avoid duplicate utilities; consolidate in `src/lib`.
+## Server vs Client Boundary
+- Server Components are the default for all pages, layouts, and data-fetching components.
+- Add `"use client"` only for: search input interactivity, tab/nav active state, charts (Canvas), theme toggle, SWR hooks, optimistic watchlist/alert mutations, live time counters.
+- Every async Server Component that fetches data must have a Suspense boundary with a matching skeleton component.
+
+## Scraper Isolation
+- Scraper modules (`src/lib/scrapers/`) run exclusively on the Railway service.
+- Next.js API routes call the Railway scraper service via HTTP — they never import `playwright` or run browser automation directly.
+- The Railway service is the only place Playwright is installed or executed.
 
 ## Import Conventions
-- Use `@/*` alias (mapped to `src/*`) for all internal imports.
-- Keep relative imports local within same folder subtree.
+- Use `@/*` alias (mapped to `src/*`) for all non-relative imports.
+- Relative imports are allowed only within the same immediate folder.
+- Import from `src/types/index.ts` barrel, not from individual type files.

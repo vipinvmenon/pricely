@@ -1,19 +1,85 @@
+---
+description: API route structure, Zod validation, Redis cache patterns, scraper architecture, and error handling rules.
+globs: ["src/app/api/**/*", "src/lib/scrapers/**/*", "src/lib/cache/**/*", "src/lib/db/**/*"]
+alwaysApply: false
+---
+
 # API Patterns
 
-## Service Layer Contract
-- Network and data access logic belongs in `src/services`.
-- Components and pages must not call raw `fetch` directly except trivial bootstrap cases.
-- Wrap responses in typed helpers and validate response shape where practical.
+## Route Handler Structure
+Every API route follows this exact order — no exceptions:
+1. Parse and validate all inputs with Zod (throw 400 on failure)
+2. Check Redis cache — return cached result immediately if hit
+3. Call scraper service or external API
+4. Write result to Redis cache + fire-and-forget persist to Supabase
+5. Return typed response matching `src/types/index.ts`
+
+Route handlers orchestrate only. All business logic lives in `src/lib/` modules.
+
+```typescript
+// Minimum route structure
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const q    = z.string().min(1).parse(searchParams.get('q'))
+  const city = z.enum(['BLR','DEL','MUM','HYD','CHE','PUN']).parse(searchParams.get('city') ?? 'BLR')
+
+  const cacheKey = `price:grocery:${normalizeQuery(q)}:${city}`
+  const cached = await redis.get(cacheKey)
+  if (cached) return Response.json(JSON.parse(cached as string))
+
+  // ... fetch, cache, return
+}
+```
+
+## Cache Key Conventions
+All cache keys must use these exact patterns and TTLs:
+
+| Key pattern | TTL | Used for |
+|---|---|---|
+| `price:{category}:{normalized-query}:{city}` | 300s | Price results |
+| `stores:{city}` | 86400s | Store/location IDs per city |
+| `trending:{city}` | 600s | Trending searches |
+| `history:{productId}:{city}` | 1800s | Price history points |
+
+- Always call `normalizeQuery(q)` from `src/lib/utils/format.ts` before building cache keys.
+- Never construct cache keys with raw user input strings.
+
+## Scraper Architecture
+- Scrapers are **never imported inside `src/app/api/`** — they run on Railway only.
+- API routes call the Railway scraper service via authenticated HTTP POST.
+- Use `Promise.allSettled()` for all parallel scrapes — one platform failing must never block others:
+  ```typescript
+  const settled = await Promise.allSettled([
+    scrape(platform1), scrape(platform2), scrape(platform3)
+  ])
+  const prices = settled
+    .filter(r => r.status === 'fulfilled')
+    .map(r => (r as PromiseFulfilledResult<PriceResult>).value)
+  ```
+- Every scraper class extends `BaseScraper` (`src/lib/scrapers/base.ts`).
+- Retry policy: 3 attempts, exponential backoff `2s → 4s → 8s`.
+- Rotate user-agents on every request using the base class helper.
 
 ## Error Handling
-- Throw explicit errors for non-OK responses.
-- Avoid silent failure branches.
-- Return predictable typed data from service functions.
+- Never silently swallow scraper or API errors.
+- Log all scraper failures to Sentry with: platform name, query, city, error message.
+- Return partial results (only fulfilled platforms) rather than a full 500 response.
+- Zod parse failures return `400` with the validation error message.
+- Auth failures on protected routes return `401`.
+- Cron route must verify `Authorization: Bearer ${CRON_SECRET}` header and return `401` if missing.
 
-## Separation Rules
-- Route handlers (`app/api/**/route.ts`) orchestrate request/response only.
-- Business logic should live in feature/service modules, not route files.
+## City and Platform Registry
+- Supported cities: `'BLR' | 'DEL' | 'MUM' | 'HYD' | 'CHE' | 'PUN'`
+- Detect city from the `x-vercel-ip-city` request header (free on Vercel Edge). Default: `'BLR'`.
+- Platform metadata (name, color, abbreviation, category) lives exclusively in `src/lib/utils/platforms.ts`.
+- Import `PLATFORMS` and `PlatformId` from there — never duplicate platform data in route files.
 
-## Extensibility
-- Keep service functions small and reusable.
-- Centralize endpoint construction and shared headers/auth in service utilities.
+## Supabase Usage
+- Use the service-role client only in API routes and server-side utilities.
+- Use the anon client (with RLS) in Server Components that need per-user data.
+- Never expose the service-role key to the client bundle.
+- Watchlist and alert tables have RLS enabled — queries are automatically scoped to `auth.uid()`.
+
+## Response Shape
+All API responses return arrays or objects that match types from `src/types/index.ts`.
+Never return ad-hoc shapes from route handlers.

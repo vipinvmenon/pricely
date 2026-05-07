@@ -1,22 +1,42 @@
+---
+description: Validation gates, test coverage priorities, and test organization rules.
+globs: ["**/*.test.ts", "**/*.test.tsx", "tests/**/*"]
+alwaysApply: false
+---
+
 # Testing Rules
 
-## Minimum Quality Gates
-- Every non-trivial change must pass:
-  - lint
-  - typecheck
-  - build
+## Validation Gates
+Always ask the user for explicit approval before running any of these commands:
+- `npm run lint`
+- `npx tsc --noEmit`
+- `npm run build`
+
+Run them in this order after completing a phase:
+1. `npm run lint` — fix all reported issues before proceeding
+2. `npx tsc --noEmit` — fix all type errors before proceeding
+3. `npm run build` — confirm production build passes
 
 ## Coverage Priorities
-- Prioritize tests for:
-  - feature logic and edge cases
-  - service layer request/response behavior
-  - critical UI states (loading, error, empty, success)
+Test these in order of importance:
+
+1. **Price and format utilities** (`src/lib/utils/format.ts`) — `formatPrice`, `normalizeQuery`, `formatRelativeTime` edge cases
+2. **Zod schemas** on API routes — valid inputs, invalid inputs, missing fields, wrong city codes
+3. **Scraper retry behavior** — `BaseScraper.withRetry` backoff timing and max-retry throw
+4. **`Promise.allSettled` aggregation** — partial failure still returns fulfilled results
+5. **UI critical states** — loading skeleton, error boundary fallback, empty state, success render
 
 ## Test Organization
-- Unit tests under `tests/unit` or colocated near modules.
-- Integration/e2e tests under `tests/e2e`.
-- Keep test names behavior-focused and deterministic.
+- Unit tests colocated with their module: `src/lib/utils/format.test.ts`, `src/lib/scrapers/base.test.ts`
+- API route integration tests under `tests/integration/api/`
+- No e2e tests are required until real scraper integrations are live
+
+## What Not to Test
+- Snapshot tests on components that are still being visually iterated — they create churn without value
+- Implementation internals — test behavior and output only
+- Third-party library internals (Supabase, Redis, SWR)
 
 ## Forbidden
-- Merging changes that break existing tests.
-- Adding code paths without at least a validation strategy.
+- Merging any change that causes a previously passing test to fail
+- Writing code paths that have no test or explicit validation strategy noted in a comment
+- Using `jest.mock` to mask real integration bugs in unit tests — use proper test doubles

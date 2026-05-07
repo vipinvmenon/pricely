@@ -1,20 +1,68 @@
+---
+description: Frontend component standards, data loading patterns, state management, accessibility, and responsive layout rules.
+globs: ["src/components/**/*", "src/app/**/*.tsx", "src/app/**/*.ts"]
+alwaysApply: false
+---
+
 # Frontend UI Rules
 
 ## Component Standards
-- Build shared primitives in `src/components/ui`.
-- Keep feature-specific widgets inside `src/features/<feature>/components`.
-- Prefer composition over deep prop drilling.
+- All glass surfaces use `<GlassCard>` — never a plain `<div>` with a background color or backdrop-filter.
+- Shared primitives live in `src/components/ui/` — no duplicates in feature or page files.
+- Layout chrome (nav, tab bar) lives in `src/components/layout/`.
+- Feature widgets (SparkChart, PlatformLogo, WatchlistButton) live in `src/components/features/`.
+- `src/components/ui/` must not import from `src/components/features/`.
 
-## State and Accessibility
-- Every interactive element must provide visible focus styles.
-- Support keyboard interaction and semantic attributes.
-- Meet minimum target size for touch interactions (44x44).
+## Data Loading
+- Server Components fetch initial page data directly (trending lists, product metadata).
+- Price data is always fetched client-side via SWR — prices change frequently and must not be cached at the SSR layer.
+- SWR pattern for price routes:
+  ```tsx
+  const { data, isLoading } = useSWR(
+    `/api/prices/${category}?q=${query}&city=${city}`,
+    fetcher,
+    { refreshInterval: 300_000 }
+  )
+  ```
+- Every async Server Component that fetches data must be wrapped in a `<Suspense>` boundary with a skeleton component that matches the loaded layout.
+- Skeletons must match the visual shape of the real content (same card height, same grid columns).
 
-## Styling Discipline
-- Use design tokens via CSS variables.
-- Keep utility classes readable and intention-revealing.
-- Do not duplicate style recipes across components.
+## Global State (Zustand)
+- Three stores only: `useThemeStore` (theme), `useCityStore` (active city), `useAuthStore` (session).
+- No per-component or per-feature state goes into Zustand stores.
+- Watchlist and alert mutations use SWR optimistic updates — not Zustand.
+
+## Accessibility
+- Every interactive element has a visible `focus-visible` outline using `var(--accent)` or a token-derived ring.
+- Minimum touch target size: 44×44px for all tappable controls.
+- Semantic roles and labels are required on: tabs, toggles, dialogs, alerts, inputs, icon-only buttons.
+- WCAG AA contrast enforced for all text and icon colors in both dark and light themes.
+- All motion-capable components check `prefers-reduced-motion: reduce` and skip animation if set.
+
+## Responsive Layout
+- Mobile-first default. Desktop enhancements applied at `lg` (1024px) and `xl` (1280px).
+- Mobile content gutters: 16–20px. Desktop content gutters: 24–32px.
+- **Desktop shell** (`≥ 1024px`): `DesktopNav` 220px fixed left + `<main>` flex-1, no TabBar.
+- **Mobile shell** (`< 1024px`): no side nav, `TabBar` fixed bottom, `<main>` has `padding-bottom: 100px`.
+- `DesktopNav` and `TabBar` are both `"use client"` components (active state requires client navigation hooks).
 
 ## Route Layer Discipline
-- Keep `app/*/page.tsx` focused on composition only.
-- Move data and behavior logic to feature/services layers.
+- `app/**/page.tsx` files are composition only — no inline data fetching logic, no business logic.
+- Sticky mobile CTAs and screen-specific chrome belong in the page file, not inside shared components.
+- Dynamic segments (`[query]`, `[id]`) are validated in the route before being passed to components.
+
+## Patterns to Follow
+```tsx
+// Page enter animation — apply to root div of every page
+const pageVariants = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } }
+}
+
+// List stagger — wrap list container and items
+const container = { animate: { transition: { staggerChildren: 0.04 } } }
+const item = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0, transition: { duration: 0.2 } } }
+
+// Sort reorder — each card gets layout + layoutId
+<motion.div layout layoutId={`card-${platform}`}>
+```

@@ -1,55 +1,105 @@
-# Baseline Audit Manifest
+# Baseline Manifest — Pre-Rewrite State
 
-This manifest captures the repository state before cleanup and architecture setup.
+Captured before the full rewrite begins. Describes what currently exists and what happens to each file.
 
-## Keep
+---
 
-- `app/layout.tsx` - required App Router root layout, will be updated.
-- `app/globals.css` - global styles entrypoint, will be redesigned to match design-system rules.
-- `package.json` - Next.js runtime scripts and dependencies baseline.
-- `package-lock.json` - lockfile baseline.
-- `tsconfig.json` - TypeScript baseline (to be tightened for `src` architecture).
-- `eslint.config.mjs` - lint baseline.
-- `postcss.config.mjs` - Tailwind/PostCSS baseline.
-- `.gitignore` - repository hygiene baseline.
-- `next-env.d.ts` - required Next.js TypeScript declaration file.
-- `CLAUDE.md` - existing workspace pointer.
+## Preserve Untouched
 
-## Move (Archive)
+These files must never be modified during the rewrite:
 
-- `design/` -> `docs/design/` (reference-only design artifacts, non-production code).
+| File | Reason |
+|---|---|
+| `package.json` | Dependency and scripts baseline |
+| `package-lock.json` | Lockfile |
+| `tsconfig.json` | TypeScript config |
+| `next.config.ts` | Next.js config |
+| `postcss.config.mjs` | Tailwind/PostCSS pipeline |
+| `eslint.config.mjs` | Lint baseline |
+| `.gitignore` | Repository hygiene |
+| `next-env.d.ts` | Next.js TS declarations |
+| `.env*` | Environment variable files |
+| `docs/design/design-system-contract.md` | Enforced engineering contract |
+| `docs/design/pricely-design-system.html` | Pixel-level visual reference |
+| `docs/design/ios-frame.jsx` | Mobile frame reference |
+| `docs/PRODUCT_PLAN.md` | Product strategy reference |
+| `.cursor/rules/*.mdc` | Agent rules (already rewritten) |
+| `AGENTS.md` | Agent operating manual |
+| `REBUILD_PLAN.md` | Rewrite architecture plan |
+| `PROGRESS.md` | Phase-by-phase progress tracker |
+| `BASELINE_MANIFEST.md` | This file |
 
-## Delete
+---
 
-- `app/page.tsx` - create-next-app placeholder landing route.
-- `README.md` - template boilerplate docs.
-- `next.config.ts` - empty/no-op config.
-- `public/file.svg` - template asset not needed for foundation.
-- `public/globe.svg` - template asset not needed for foundation.
-- `public/next.svg` - template asset not needed for foundation.
-- `public/vercel.svg` - template asset not needed for foundation.
-- `public/window.svg` - template asset not needed for foundation.
+## Delete During Phase 0 Audit
 
-## Create
+> Confirm each file's content before deleting. Produce replacement map first.
 
-- `src/components`
-- `src/features`
-- `src/hooks`
-- `src/lib`
-- `src/services`
-- `src/types`
-- `src/constants`
-- `src/styles`
-- `src/config`
-- `.cursor/rules/00-project-context.mdc`
-- `.cursor/rules/01-architecture.mdc`
-- `.cursor/rules/02-design-system.mdc`
-- `.cursor/rules/03-frontend-ui.mdc`
-- `.cursor/rules/04-api-patterns.mdc`
-- `.cursor/rules/05-testing.mdc`
-- `.cursor/rules/06-agent-behavior.mdc`
+### Route layer (`app/`)
+| File | Replacement |
+|---|---|
+| `app/layout.tsx` | New root layout (fonts, ThemeProvider) |
+| `app/page.tsx` | `app/(dashboard)/page.tsx` |
+| `app/globals.css` | New globals importing `tokens.css` |
+| `app/alerts/page.tsx` | Moved into alerts feature (Phase 5 or later) |
+| `app/cabs/page.tsx` | `app/(dashboard)/cabs/page.tsx` |
+| `app/item/[id]/page.tsx` | `app/(dashboard)/product/[id]/page.tsx` |
+| `app/profile/page.tsx` | Deferred to Phase 9 (auth-gated) |
+| `app/search/page.tsx` | `app/(dashboard)/search/[query]/page.tsx` |
+| `app/settings/page.tsx` | Deferred |
+| `app/watchlist/page.tsx` | `app/(dashboard)/watchlist/page.tsx` |
+| `app/api/alerts/route.ts` | New Zod-validated route (Phase 6) |
+| `app/api/cabs/route.ts` | `app/api/prices/cabs/route.ts` (Phase 6) |
+| `app/api/search/route.ts` | `app/api/search/trending/route.ts` (Phase 6) |
+| `app/api/prices/[id]/route.ts` | `app/api/history/[productId]/route.ts` (Phase 6) |
 
-## Notes
+### Source layer (`src/`)
+All files under the following directories are replaced wholesale:
+- `src/components/` → rebuilt in Phase 3
+- `src/features/` → dissolved; logic moves to `src/components/features/` and `src/lib/`
+- `src/styles/` → replaced by new `tokens.css` in Phase 2
+- `src/services/` → replaced by `src/lib/cache/`, `src/lib/db/`, scraper service pattern
+- `src/hooks/` → replaced by SWR hooks inline in client components
+- `src/types/` → replaced by single `src/types/index.ts` barrel
+- `src/constants/` → merged into `src/lib/utils/platforms.ts`
+- `src/config/` → merged into root layout and environment variable helpers
+- `src/lib/data/` (mock data files) → replaced by typed mock responses in API routes
 
-- Dependencies are already minimal; remove only if proven stale after refactor validation.
-- No product features are introduced in this pass.
+---
+
+## Current App State (Before Rewrite)
+
+| Area | Status |
+|---|---|
+| Visual system | Partial — tokens exist but GlassCard not universal, wrong fonts (Geist) |
+| Routes | Present but wrong URL shape, no dashboard route group |
+| API routes | Stub-level, no Zod validation, no Redis, no real scraping |
+| Database | No Supabase schema deployed |
+| Cache | No Redis integration |
+| Auth | No Supabase Auth |
+| Scrapers | No scraper implementations |
+| Verdict engine | Not implemented |
+| Alerts/cron | Stub only |
+
+---
+
+## New Directories Created in Phase 2+
+
+```
+src/
+  app/
+    (dashboard)/
+  components/
+    ui/
+    layout/
+    features/
+  lib/
+    scrapers/
+    cache/
+    db/
+    ai/
+    geo/
+    utils/
+  styles/
+  types/
+```

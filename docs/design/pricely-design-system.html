@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Pricely · Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* dark tokens */
+  --d-bg0:#07080B; --d-bg1:#0E1015; --d-bg2:#171A22; --d-bg3:#21242E;
+  --d-line:rgba(255,255,255,0.07); --d-line2:rgba(255,255,255,0.12);
+  --d-text:#F6F6F8; --d-dim:rgba(246,246,248,0.66); --d-faint:rgba(246,246,248,0.42);
+  --d-glass:rgba(28,30,38,0.32); --d-glass-strong:rgba(34,36,46,0.55);
+  --d-glass-border:rgba(255,255,255,0.07); --d-glass-border-hi:rgba(255,255,255,0.12);
+  --d-accent:#1DB954; --d-accent-soft:rgba(29,185,84,0.12);
+  --d-save:#5BE3A0; --d-save-soft:rgba(91,227,160,0.14);
+  --d-warn:#FFC062; --d-danger:#FF6680;
+  /* light tokens */
+  --l-bg0:#F2EEE8; --l-bg1:#F9F6F1; --l-bg2:#FFFFFF; --l-bg3:#EFEAE3;
+  --l-line:rgba(20,18,15,0.07); --l-line2:rgba(20,18,15,0.12);
+  --l-text:#14120F; --l-dim:rgba(20,18,15,0.62); --l-faint:rgba(20,18,15,0.40);
+  --l-glass:rgba(255,255,255,0.42); --l-glass-strong:rgba(255,255,255,0.65);
+  --l-glass-border:rgba(20,18,15,0.06); --l-glass-border-hi:rgba(255,255,255,0.5);
+  --l-accent:#1DB954; --l-accent-soft:rgba(29,185,84,0.10);
+  --l-save:#1E9F6E; --l-save-soft:rgba(30,159,110,0.10);
+  --l-warn:#C68A2E; --l-danger:#D8284A;
+  /* type */
+  --f-display:"Inter Tight",system-ui,sans-serif;
+  --f-text:"Inter",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,monospace;
+  /* radius */
+  --r-sm:12px; --r-md:16px; --r-lg:22px; --r-xl:30px; --r-xxl:38px; --r-pill:999px;
+  /* gradients */
+  --ramp-accent:linear-gradient(135deg,#1ED760 0%,#1DB954 50%,#0F8A3F 100%);
+  --ramp-save:linear-gradient(135deg,#1ED760 0%,#1DB954 100%);
+  --void-dark:radial-gradient(70% 50% at 15% -10%,rgba(29,185,84,.10) 0%,transparent 60%),
+    radial-gradient(60% 45% at 95% 100%,rgba(29,185,84,.06) 0%,transparent 60%),
+    linear-gradient(180deg,#191414 0%,#0E0B0B 100%);
+  --void-light:radial-gradient(70% 50% at 15% -10%,rgba(29,185,84,.07) 0%,transparent 60%),
+    radial-gradient(60% 45% at 95% 100%,rgba(15,138,63,.05) 0%,transparent 60%),
+    linear-gradient(180deg,#FAF6F0 0%,#F2EEE8 100%);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: #0E0B0B; color: #F6F6F8; font-family: var(--f-text); line-height: 1.4; }
+
+/* ── NAV ── */
+.nav {
+  position: sticky; top: 0; z-index: 200;
+  display: flex; align-items: center; gap: 6px; padding: 10px 24px;
+  background: rgba(10,9,9,0.85); backdrop-filter: blur(20px) saturate(160%);
+  border-bottom: 1px solid rgba(255,255,255,0.06); overflow-x: auto;
+}
+.nav-logo { display:flex; align-items:center; gap:8px; margin-right:12px; flex-shrink:0; }
+.nav-logo-text { font-family:var(--f-display); font-weight:700; font-size:16px; letter-spacing:-.5px; color:#F4F4F6; }
+.nav-pill {
+  padding:5px 13px; border-radius:var(--r-pill); font-size:12px; font-weight:500;
+  border:1px solid rgba(255,255,255,0.08); color:rgba(246,246,248,0.6);
+  cursor:pointer; white-space:nowrap; flex-shrink:0; transition:all .15s; user-select:none;
+}
+.nav-pill:hover { color:#F6F6F8; border-color:rgba(255,255,255,0.18); }
+.nav-pill.active { background:rgba(29,185,84,0.12); border-color:#1DB954; color:#1DB954; }
+
+/* ── SECTIONS ── */
+.section { padding: 40px 40px 60px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.section.light-bg { background: var(--void-light); }
+.section.dark-bg  { background: var(--void-dark); }
+.eyebrow { font-family:var(--f-mono); font-size:10px; letter-spacing:1.8px; text-transform:uppercase; color:rgba(246,246,248,0.38); }
+.eyebrow.light { color:rgba(20,18,15,0.38); }
+.section-title { font-family:var(--f-display); font-size:24px; font-weight:600; letter-spacing:-.6px; color:#F6F6F8; margin-top:4px; }
+.section-title.light { color:#14120F; }
+.section-sub { font-size:13px; color:rgba(246,246,248,0.5); margin-top:4px; }
+.section-sub.light { color:rgba(20,18,15,0.5); }
+.section-head { margin-bottom:28px; }
+.grid { display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start; }
+.ab { display:flex; flex-direction:column; gap:8px; }
+.ab-label { font-family:var(--f-mono); font-size:11px; color:rgba(246,246,248,0.42); letter-spacing:.4px; }
+.ab-label.light { color:rgba(20,18,15,0.42); }
+.ab-frame { overflow:hidden; box-shadow:0 2px 28px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,0.05); }
+
+/* ── COVER ── */
+.cover {
+  min-height: 100vh; padding: 56px 64px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  background: var(--void-dark);
+}
+.cover-headline {
+  font-family:var(--f-display); font-weight:600; font-size:clamp(48px,6vw,88px);
+  letter-spacing:-3px; line-height:.96; max-width:920px; color:#F4F4F6;
+}
+.cover-headline .acc {
+  background:var(--ramp-accent); -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent; background-clip:text;
+}
+.cover-desc { margin-top:28px; font-size:18px; color:rgba(244,244,246,.65); max-width:680px; line-height:1.55; }
+.cover-foot { display:flex; justify-content:space-between; font-family:var(--f-mono); font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:rgba(244,244,246,.38); }
+
+/* ── GLASS SURFACE helper ── */
+.glass-surface {
+  position:relative; isolation:isolate; border-radius:var(--r-lg);
+}
+.glass-surface::before {
+  content:''; position:absolute; inset:0; border-radius:inherit;
+  background:var(--d-glass);
+  backdrop-filter:blur(28px) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter:blur(28px) saturate(180%) brightness(1.05);
+  box-shadow:0 1px 0 rgba(255,255,255,0.03) inset, 0 6px 20px -16px rgba(0,0,0,.45);
+  z-index:0;
+}
+.glass-surface::after {
+  content:''; position:absolute; inset:0; border-radius:inherit;
+  border:1px solid var(--d-glass-border); pointer-events:none; z-index:2;
+}
+.glass-surface .gs-content { position:relative; z-index:3; }
+
+/* ── BRAND PANEL ── */
+.brand-panel {
+  padding:36px; border-radius:var(--r-xl); font-family:var(--f-text);
+}
+.brand-panel.dark { background:var(--void-dark); color:var(--d-text); }
+.brand-panel.light { background:var(--void-light); color:var(--l-text); }
+.brand-row {
+  display:grid; grid-template-columns:80px 1fr 1fr; align-items:center; gap:20px;
+  padding:20px; border-radius:var(--r-lg); margin-bottom:12px;
+}
+.brand-row.dark { background:var(--d-glass); border:1px solid var(--d-glass-border); }
+.brand-row.light { background:var(--l-glass); border:1px solid var(--l-glass-border); }
+.brand-note-label { font-family:var(--f-mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
+.brand-note-label.dark { color:var(--d-faint); }
+.brand-note-label.light { color:var(--l-faint); }
+.brand-note-desc { font-size:12px; line-height:1.5; }
+.brand-note-desc.dark { color:var(--d-dim); }
+.brand-note-desc.light { color:var(--l-dim); }
+
+/* ── TOKEN COLOR PANEL ── */
+.token-panel { padding:32px; border-radius:var(--r-xl); font-family:var(--f-text); }
+.token-panel.dark { background:var(--void-dark); color:var(--d-text); }
+.token-panel.light { background:var(--void-light); color:var(--l-text); }
+.token-group-label { font-size:11px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:10px; }
+.token-group-label.dark { color:var(--d-dim); }
+.token-group-label.light { color:var(--l-dim); }
+.swatch-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:20px; }
+.swatch { border-radius:var(--r-md); overflow:hidden; }
+.swatch.dark { border:1px solid var(--d-glass-border); }
+.swatch.light { border:1px solid var(--l-glass-border); }
+.swatch-color { height:52px; }
+.swatch-label { padding:6px 8px; }
+.swatch-label.dark { background:var(--d-glass); }
+.swatch-label.light { background:var(--l-glass); }
+.swatch-name { font-size:11px; font-weight:600; }
+.swatch-name.dark { color:var(--d-text); }
+.swatch-name.light { color:var(--l-text); }
+.swatch-val { font-family:var(--f-mono); font-size:9px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.swatch-val.dark { color:var(--d-faint); }
+.swatch-val.light { color:var(--l-faint); }
+.ramp-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.ramp-pill { height:44px; border-radius:var(--r-md); display:flex; align-items:center; padding:0 14px; font-family:var(--f-mono); font-size:11px; font-weight:600; }
+
+/* ── TYPE PANEL ── */
+.type-panel { width:640px; padding:32px; border-radius:var(--r-xl); background:var(--void-dark); color:var(--d-text); font-family:var(--f-text); }
+.type-row { display:grid; grid-template-columns:110px 50px 80px 1fr; gap:12px; align-items:baseline; padding:12px 0; border-bottom:1px solid var(--d-line); }
+.type-meta { font-family:var(--f-mono); font-size:10px; color:var(--d-faint); }
+.mono-specimen { margin-top:16px; padding:18px; border-radius:var(--r-md); background:var(--d-glass); border:1px solid var(--d-glass-border); }
+
+/* ── GLASS PANEL ── */
+.glass-panel { width:640px; padding:32px; border-radius:var(--r-xl); background:var(--void-dark); color:var(--d-text); position:relative; overflow:hidden; }
+.glass-panel-blob { position:absolute; inset:0; background:radial-gradient(50% 60% at 30% 40%,rgba(29,185,84,.18) 0%,transparent 60%),radial-gradient(40% 50% at 70% 60%,rgba(29,185,84,.10) 0%,transparent 60%); pointer-events:none; }
+.glass-levels { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
+.glass-level { padding:20px; border-radius:var(--r-lg); border:1px solid var(--d-glass-border); }
+.radius-row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+.radius-box { text-align:center; }
+.radius-box-inner { margin:0 auto 6px; background:var(--d-glass); border:1px solid var(--d-glass-border); }
+
+/* ── COMPONENTS PANEL ── */
+.comp-panel { padding:32px; border-radius:var(--r-xl); font-family:var(--f-text); }
+.comp-panel.dark { background:var(--void-dark); color:var(--d-text); width:780px; }
+.comp-panel.light { background:var(--void-light); color:var(--l-text); width:780px; }
+.comp-section-label { font-family:var(--f-mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px; }
+.comp-section-label.dark { color:var(--d-faint); }
+.comp-section-label.light { color:var(--l-faint); }
+.comp-block { margin-bottom:20px; }
+
+/* ── SEARCH BAR ── */
+.search-bar {
+  position:relative; isolation:isolate; border-radius:var(--r-pill);
+  display:flex; align-items:center; gap:12px; padding:0 12px 0 20px;
+}
+.search-bar::before {
+  content:''; position:absolute; inset:0; border-radius:inherit;
+  backdrop-filter:blur(32px) saturate(190%) brightness(1.06);
+  -webkit-backdrop-filter:blur(32px) saturate(190%) brightness(1.06);
+  z-index:0;
+}
+.search-bar.dark::before { background:var(--d-glass-strong); box-shadow:0 1px 0 rgba(255,255,255,0.06) inset, 0 8px 28px -12px rgba(0,0,0,.5); }
+.search-bar.light::before { background:var(--l-glass-strong); box-shadow:0 1px 0 rgba(255,255,255,0.55) inset, 0 6px 16px -12px rgba(20,18,15,0.08); }
+.search-bar::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:1; }
+.search-bar.dark::after { border:1px solid var(--d-glass-border); }
+.search-bar.light::after { border:1px solid var(--l-glass-border); }
+.search-bar > * { position:relative; z-index:2; }
+.search-bar-text { flex:1; font-family:var(--f-text); font-size:15px; font-weight:450; letter-spacing:-.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.search-bar-text.dark { color:var(--d-faint); }
+.search-bar-text.dark.filled { color:var(--d-text); }
+.search-bar-text.light { color:var(--l-faint); }
+.search-bar-text.light.filled { color:var(--l-text); }
+.search-filter-btn { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.search-filter-btn.dark { background:var(--d-accent-soft); border:1px solid var(--d-accent); }
+.search-filter-btn.light { background:var(--l-accent-soft); border:1px solid var(--l-accent); }
+.search-h-lg { height:64px; }
+.search-h-md { height:54px; }
+.search-h-sm { height:44px; }
+
+/* ── PLATFORM PILL ── */
+.plat-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 10px 5px 6px; border-radius:var(--r-pill); }
+.plat-pill.dark { background:var(--d-glass); border:1px solid var(--d-glass-border); color:var(--d-text); }
+.plat-pill.light { background:var(--l-glass); border:1px solid var(--l-glass-border); color:var(--l-text); }
+.plat-logo { border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-family:var(--f-display); font-weight:700; color:#fff; flex-shrink:0; font-size:11px; }
+.plat-pill-name { font-size:12px; font-weight:500; letter-spacing:-.1px; }
+
+/* ── RESULT CARD ── */
+.result-card { padding:12px 14px; border-radius:var(--r-lg); display:flex; align-items:center; gap:12px; position:relative; overflow:hidden; }
+.result-card.dark { background:var(--d-glass); border:1px solid var(--d-glass-border); }
+.result-card.light { background:var(--l-glass); border:1px solid var(--l-glass-border); }
+.result-card.dark.best { background:var(--d-accent-soft); border-color:rgba(29,185,84,0.35); }
+.result-card.light.best { background:var(--l-accent-soft); border-color:rgba(29,185,84,0.35); }
+.best-badge { position:absolute; top:10px; right:10px; padding:2px 8px; border-radius:var(--r-pill); background:var(--ramp-accent); font-family:var(--f-mono); font-size:9.5px; font-weight:600; color:#fff; letter-spacing:.5px; }
+.result-info { flex:1; min-width:0; }
+.result-plat-name { font-size:13.5px; font-weight:600; }
+.result-plat-name.dark { color:var(--d-text); }
+.result-plat-name.light { color:var(--l-text); }
+.result-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px; }
+.result-price-row { display:flex; align-items:baseline; gap:8px; margin-top:4px; }
+.price-main { font-family:var(--f-mono); font-weight:600; font-variant-numeric:tabular-nums; }
+.price-main.dark { color:var(--d-text); }
+.price-main.dark.lg { font-size:20px; }
+.price-main.dark.xl { font-size:28px; }
+.price-main.dark.md { font-size:18px; }
+.price-main.light { color:var(--l-text); }
+.price-main.light.lg { font-size:20px; }
+.price-main.light.xl { font-size:28px; }
+.price-main.light.md { font-size:18px; }
+.price-struck { font-family:var(--f-mono); font-size:12px; text-decoration:line-through; }
+.price-struck.dark { color:var(--d-faint); }
+.price-struck.light { color:var(--l-faint); }
+.save-badge { display:inline-flex; align-items:center; gap:3px; padding:3px 8px; border-radius:var(--r-pill); font-family:var(--f-mono); font-size:11px; font-weight:600; }
+.save-badge.dark { background:var(--d-save-soft); border:1px solid rgba(91,227,160,.2); color:var(--d-save); }
+.save-badge.light { background:var(--l-save-soft); border:1px solid rgba(30,159,110,.2); color:var(--l-save); }
+.eta-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:var(--r-pill); font-family:var(--f-mono); font-size:11px; }
+.eta-badge.dark { background:rgba(255,255,255,.04); border:1px solid var(--d-glass-border); color:var(--d-dim); }
+.eta-badge.light { background:rgba(20,18,15,.04); border:1px solid var(--l-glass-border); color:var(--l-dim); }
+.offer-badge { font-family:var(--f-mono); font-size:10px; padding:2px 6px; border-radius:4px; }
+.offer-badge.dark { background:var(--d-accent-soft); color:var(--d-accent); }
+.offer-badge.light { background:var(--l-accent-soft); color:var(--l-accent); }
+
+/* ── VERDICT CHIP ── */
+.verdict { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:var(--r-md); }
+.verdict.buy.dark { background:var(--d-save-soft); border:1px solid rgba(91,227,160,.3); color:var(--d-save); }
+.verdict.buy.light { background:var(--l-save-soft); border:1px solid rgba(30,159,110,.3); color:var(--l-save); }
+.verdict.wait.dark { background:rgba(255,192,98,.12); border:1px solid rgba(255,192,98,.3); color:var(--d-warn); }
+.verdict.wait.light { background:rgba(198,138,46,.12); border:1px solid rgba(198,138,46,.3); color:var(--l-warn); }
+.verdict-icon { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.verdict-icon.buy { background:var(--d-save); }
+.verdict-icon.buy.light { background:var(--l-save); }
+.verdict-icon.wait { background:var(--d-warn); }
+.verdict-icon.wait.light { background:var(--l-warn); }
+.verdict-title { font-size:12.5px; font-weight:600; letter-spacing:-.1px; line-height:1.1; }
+.verdict-conf { font-family:var(--f-mono); font-size:10px; opacity:.7; margin-top:2px; }
+
+/* ── CTA BUTTON ── */
+.cta-btn { padding:14px 18px; border-radius:var(--r-lg); background:var(--ramp-accent); color:#fff; display:flex; align-items:center; gap:10px; box-shadow:0 8px 24px -8px rgba(29,185,84,.5); cursor:pointer; }
+.cta-label { font-size:11px; opacity:.85; text-transform:uppercase; letter-spacing:.6px; font-family:var(--f-text); }
+.cta-price { font-family:var(--f-display); font-size:18px; font-weight:700; letter-spacing:-.4px; }
+
+/* ── PHONE FRAME ── */
+.phone { width:390px; border-radius:52px; overflow:hidden; position:relative; flex-shrink:0; }
+.phone.dark { background:var(--d-bg1); box-shadow:0 0 0 10px #0a0a0a, 0 40px 80px rgba(0,0,0,.65); }
+.phone.light { background:var(--l-bg0); box-shadow:0 0 0 10px #1a1a1a, 0 40px 80px rgba(0,0,0,.55); }
+.phone-status { height:50px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; position:relative; z-index:10; }
+.phone-pill { width:124px; height:34px; border-radius:17px; background:#000; position:absolute; left:50%; transform:translateX(-50%); top:8px; }
+.phone-time { font-family:var(--f-mono); font-size:13px; font-weight:600; }
+.phone-time.dark { color:var(--d-text); }
+.phone-time.light { color:var(--l-text); }
+.phone-screen { height:780px; overflow:hidden; position:relative; }
+.screen { width:100%; height:100%; display:flex; flex-direction:column; font-family:var(--f-text); overflow:hidden; }
+.screen.dark { background:var(--void-dark); color:var(--d-text); }
+.screen.light { background:var(--void-light); color:var(--l-text); }
+
+/* ── TAB BAR ── */
+.tab-bar { padding:10px 14px 22px; display:flex; justify-content:center; }
+.tab-bar-inner { position:relative; isolation:isolate; width:100%; max-width:360px; }
+.tab-bar-glass { position:absolute; inset:0; border-radius:var(--r-pill); backdrop-filter:blur(36px) saturate(200%) brightness(1.06); -webkit-backdrop-filter:blur(36px) saturate(200%) brightness(1.06); z-index:0; }
+.tab-bar-glass.dark { background:var(--d-glass-strong); box-shadow:0 1px 0 rgba(255,255,255,0.06) inset, 0 8px 28px -12px rgba(0,0,0,.5); }
+.tab-bar-glass.light { background:var(--l-glass-strong); box-shadow:0 1px 0 rgba(255,255,255,0.55) inset, 0 6px 16px -12px rgba(20,18,15,0.08); }
+.tab-bar-border { position:absolute; inset:0; border-radius:var(--r-pill); pointer-events:none; z-index:1; }
+.tab-bar-border.dark { border:1px solid var(--d-glass-border); }
+.tab-bar-border.light { border:1px solid var(--l-glass-border); }
+.tab-bar-tabs { position:relative; z-index:2; display:flex; align-items:center; justify-content:space-around; padding:8px; }
+.tab { display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 14px; border-radius:var(--r-pill); }
+.tab.active.dark { background:rgba(255,255,255,.10); box-shadow:0 1px 0 rgba(255,255,255,.18) inset, 0 2px 6px rgba(0,0,0,.3); }
+.tab.active.light { background:rgba(255,255,255,.55); box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 2px 6px rgba(20,18,15,.06); }
+.tab-label { font-size:10px; }
+.tab-label.active.dark { color:var(--d-text); font-weight:600; }
+.tab-label.dark { color:var(--d-faint); font-weight:500; }
+.tab-label.active.light { color:var(--l-text); font-weight:600; }
+.tab-label.light { color:var(--l-faint); font-weight:500; }
+
+/* ── CATEGORY CHIPS ── */
+.cat-chips { padding:14px 16px 0; display:flex; gap:8px; overflow-x:auto; }
+.cat-chip { display:inline-flex; align-items:center; gap:6px; flex-shrink:0; padding:8px 14px; border-radius:var(--r-pill); font-size:13px; font-weight:500; }
+.cat-chip.dark { background:var(--d-glass); border:1px solid var(--d-glass-border); color:var(--d-text); }
+.cat-chip.dark.active { background:var(--d-accent-soft); border-color:var(--d-accent); color:var(--d-accent); }
+.cat-chip.light { background:var(--l-glass); border:1px solid var(--l-glass-border); color:var(--l-text); }
+.cat-chip.light.active { background:var(--l-accent-soft); border-color:var(--l-accent); color:var(--l-accent); }
+
+/* ── SORT PILLS ── */
+.sort-pills { padding:0 16px 10px; display:flex; gap:6px; }
+.sort-pill { padding:4px 10px; border-radius:var(--r-pill); font-size:11.5px; font-weight:500; }
+.sort-pill.dark { border:1px solid var(--d-glass-border); color:var(--d-dim); background:transparent; }
+.sort-pill.dark.active { background:var(--d-accent-soft); border-color:var(--d-accent); color:var(--d-accent); }
+.sort-pill.light { border:1px solid var(--l-glass-border); color:var(--l-dim); background:transparent; }
+.sort-pill.light.active { background:var(--l-accent-soft); border-color:var(--l-accent); color:var(--l-accent); }
+
+/* ── DESKTOP SHELL ── */
+.desktop-shell { width:1200px; height:720px; display:flex; border-radius:var(--r-xxl); overflow:hidden; box-shadow:0 40px 80px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06); }
+.desktop-shell.dark { background:var(--void-dark); }
+.desktop-shell.light { background:var(--void-light); }
+.desktop-nav { width:220px; padding:24px 14px; display:flex; flex-direction:column; gap:4px; flex-shrink:0; }
+.desktop-nav.dark { border-right:1px solid var(--d-line); background:rgba(10,11,14,.5); backdrop-filter:blur(20px); }
+.desktop-nav.light { border-right:1px solid var(--l-line); background:rgba(255,255,255,.5); backdrop-filter:blur(20px); }
+.desktop-logo-row { display:flex; align-items:center; gap:8px; padding:4px 8px 20px; }
+.desktop-nav-wordmark { font-family:var(--f-display); font-weight:700; font-size:17px; letter-spacing:-.6px; }
+.desktop-nav-wordmark.dark { color:var(--d-text); }
+.desktop-nav-wordmark.light { color:var(--l-text); }
+.desktop-badge { font-family:var(--f-mono); font-size:9px; padding:2px 5px; border-radius:3px; text-transform:uppercase; letter-spacing:1px; margin-left:auto; }
+.desktop-badge.dark { color:var(--d-faint); border:1px solid var(--d-line2); }
+.desktop-badge.light { color:var(--l-faint); border:1px solid var(--l-line2); }
+.desktop-cmd { display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:12px; border-radius:var(--r-md); }
+.desktop-cmd.dark { background:var(--d-glass); border:1px solid var(--d-glass-border); color:var(--d-dim); }
+.desktop-cmd.light { background:var(--l-glass); border:1px solid var(--l-glass-border); color:var(--l-dim); }
+.desktop-cmd-text { flex:1; font-size:13px; letter-spacing:-.1px; }
+.desktop-cmd-kbd { font-family:var(--f-mono); font-size:10px; padding:2px 5px; border-radius:3px; }
+.desktop-cmd-kbd.dark { background:var(--d-bg2); color:var(--d-faint); }
+.desktop-cmd-kbd.light { background:var(--l-bg2); color:var(--l-faint); }
+.desktop-nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:var(--r-md); cursor:pointer; }
+.desktop-nav-item.dark { color:var(--d-dim); }
+.desktop-nav-item.dark.active { background:var(--d-accent-soft); color:var(--d-accent); }
+.desktop-nav-item.light { color:var(--l-dim); }
+.desktop-nav-item.light.active { background:var(--l-accent-soft); color:var(--l-accent); }
+.desktop-nav-label { font-size:13.5px; font-weight:450; }
+.desktop-nav-label.active { font-weight:600; }
+.desktop-nav-user { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:var(--r-md); margin-top:auto; }
+.desktop-nav-user.dark { background:var(--d-glass); border:1px solid var(--d-glass-border); }
+.desktop-nav-user.light { background:var(--l-glass); border:1px solid var(--l-glass-border); }
+.desktop-user-avatar { width:28px; height:28px; border-radius:50%; background:var(--ramp-accent); display:flex; align-items:center; justify-content:center; font-family:var(--f-display); font-weight:700; font-size:11px; color:#fff; flex-shrink:0; }
+.desktop-user-name { font-size:12.5px; font-weight:500; }
+.desktop-user-name.dark { color:var(--d-text); }
+.desktop-user-name.light { color:var(--l-text); }
+.desktop-user-sub { font-family:var(--f-mono); font-size:10px; }
+.desktop-user-sub.dark { color:var(--d-faint); }
+.desktop-user-sub.light { color:var(--l-faint); }
+.desktop-content { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.desktop-topbar { padding:20px 24px; }
+.desktop-topbar.dark { border-bottom:1px solid var(--d-line); background:rgba(14,16,21,.6); backdrop-filter:blur(12px); }
+.desktop-topbar.light { border-bottom:1px solid var(--l-line); background:rgba(249,246,241,.8); backdrop-filter:blur(12px); }
+.desktop-filter-row { display:flex; gap:8px; margin-top:12px; align-items:center; }
+.desktop-filter-pill { padding:5px 14px; border-radius:var(--r-pill); font-size:12.5px; font-weight:500; }
+.desktop-filter-pill.dark { border:1px solid var(--d-glass-border); color:var(--d-dim); background:transparent; }
+.desktop-filter-pill.dark.active { background:var(--d-accent-soft); border-color:var(--d-accent); color:var(--d-accent); }
+.desktop-filter-pill.light { border:1px solid var(--l-glass-border); color:var(--l-dim); background:transparent; }
+.desktop-filter-pill.light.active { background:var(--l-accent-soft); border-color:var(--l-accent); color:var(--l-accent); }
+.desktop-main { flex:1; padding:20px 24px; display:flex; gap:20px; overflow:hidden; }
+.desktop-results { flex:1; display:flex; flex-direction:column; gap:10px; overflow-y:auto; }
+.desktop-results-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+.desktop-results-title { font-family:var(--f-display); font-size:20px; font-weight:600; letter-spacing:-.5px; }
+.desktop-results-title.dark { color:var(--d-text); }
+.desktop-results-title.light { color:var(--l-text); }
+.desktop-results-meta { font-family:var(--f-mono); font-size:11px; margin-left:10px; }
+.desktop-results-meta.dark { color:var(--d-faint); }
+.desktop-results-meta.light { color:var(--l-faint); }
+.desktop-sidebar { width:280px; display:flex; flex-direction:column; gap:14px; flex-shrink:0; }
+.desktop-side-card { padding:18px; border-radius:var(--r-lg); }
+.desktop-side-card.dark { background:var(--d-glass); border:1px solid var(--d-glass-border); }
+.desktop-side-card.light { background:var(--l-glass); border:1px solid var(--l-glass-border); }
+.desktop-side-label { font-family:var(--f-mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px; }
+.desktop-side-label.dark { color:var(--d-faint); }
+.desktop-side-label.light { color:var(--l-faint); }
+.desktop-input { padding:10px 12px; border-radius:var(--r-md); font-family:var(--f-mono); font-size:14px; margin-bottom:10px; }
+.desktop-input.dark { background:var(--d-bg2); border:1px solid var(--d-line); color:var(--d-text); }
+.desktop-input.light { background:var(--l-bg2); border:1px solid var(--l-line); color:var(--l-text); }
+
+/* ── SPARKLINE ── */
+canvas.spark { display:block; }
+
+/* ── FOOTER ── */
+.footer { padding:40px 64px; display:flex; justify-content:space-between; align-items:center; background:#07080B; border-top:1px solid rgba(255,255,255,.06); }
+.footer-meta { font-family:var(--f-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:rgba(246,246,248,.35); }
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="nav">
+  <div class="nav-logo">
+    <svg width="22" height="22" viewBox="0 0 40 40" fill="none">
+      <defs>
+        <linearGradient id="ng1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1ED760"/><stop offset="1" stop-color="#1DB954"/></linearGradient>
+        <linearGradient id="ng2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F8A3F"/><stop offset="1" stop-color="#1DB954"/></linearGradient>
+      </defs>
+      <path d="M20 4a16 16 0 0 0 0 32V4z" fill="url(#ng1)"/>
+      <path d="M20 4a16 16 0 0 1 0 32V4z" fill="url(#ng2)" opacity=".95"/>
+      <rect x="19.25" y="4" width="1.5" height="32" fill="#191414"/>
+    </svg>
+    <span class="nav-logo-text">pricely</span>
+  </div>
+  <span class="nav-pill active" data-target="cover">Cover</span>
+  <span class="nav-pill" data-target="brand">Brand</span>
+  <span class="nav-pill" data-target="tokens">Tokens</span>
+  <span class="nav-pill" data-target="typeglass">Type & Glass</span>
+  <span class="nav-pill" data-target="components">Components</span>
+  <span class="nav-pill" data-target="mobile">Mobile</span>
+  <span class="nav-pill" data-target="desktop">Desktop</span>
+</nav>
+
+<!-- ── COVER ── -->
+<div id="cover" class="cover">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <svg width="52" height="52" viewBox="0 0 40 40" fill="none">
+      <defs>
+        <linearGradient id="cg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1ED760"/><stop offset="1" stop-color="#1DB954"/></linearGradient>
+        <linearGradient id="cg2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F8A3F"/><stop offset="1" stop-color="#1DB954"/></linearGradient>
+      </defs>
+      <path d="M20 4a16 16 0 0 0 0 32V4z" fill="url(#cg1)"/>
+      <path d="M20 4a16 16 0 0 1 0 32V4z" fill="url(#cg2)" opacity=".95"/>
+      <rect x="19.25" y="4" width="1.5" height="32" fill="#191414"/>
+    </svg>
+    <span style="font-family:var(--f-display);font-weight:700;font-size:36px;letter-spacing:-1.2px;color:#F4F4F6;">pricely</span>
+  </div>
+  <div>
+    <div class="cover-headline">Find the cheapest, fastest <span class="acc">everything.</span></div>
+    <div class="cover-desc">A real-time price comparison &amp; decision engine. India-first, mobile-first.<br>Premium graphite glass · Spotify-green accent · liquid-glass surfaces.</div>
+  </div>
+  <div class="cover-foot">
+    <span>Design System · v0.1 · Mid-fi</span>
+    <span>INR · India · Bengaluru</span>
+  </div>
+</div>
+
+<!-- ── BRAND ── -->
+<div id="brand" class="section dark-bg">
+  <div class="section-head">
+    <div class="eyebrow">01 · Brand</div>
+    <div class="section-title">Wordmark exploration</div>
+    <div class="section-sub">Three directions — geometric, humanist, editorial. Direction A is primary.</div>
+  </div>
+  <div class="grid" id="brand-grid"></div>
+</div>
+
+<!-- ── TOKENS ── -->
+<div id="tokens" class="section dark-bg">
+  <div class="section-head">
+    <div class="eyebrow">02 · Tokens</div>
+    <div class="section-title">Color tokens</div>
+    <div class="section-sub">Dark hero + warm light counterpart. Spotify-green accent ramp.</div>
+  </div>
+  <div class="grid" id="token-grid"></div>
+</div>
+
+<!-- ── TYPE & GLASS ── -->
+<div id="typeglass" class="section dark-bg">
+  <div class="section-head">
+    <div class="eyebrow">03 · Tokens</div>
+    <div class="section-title">Type & glass</div>
+    <div class="section-sub">Display / Text / Mono · liquid-glass surfaces, blur scale, radius.</div>
+  </div>
+  <div class="grid" id="typeglass-grid"></div>
+</div>
+
+<!-- ── COMPONENTS ── -->
+<div id="components" class="section dark-bg">
+  <div class="section-head">
+    <div class="eyebrow">04 · Components</div>
+    <div class="section-title">UI library</div>
+    <div class="section-sub">Search, pills, result cards, prices, badges, verdicts, CTAs — dark + light.</div>
+  </div>
+  <div class="grid" id="comp-grid"></div>
+</div>
+
+<!-- ── MOBILE ── -->
+<div id="mobile" class="section dark-bg">
+  <div class="section-head">
+    <div class="eyebrow">05 · Mobile</div>
+    <div class="section-title">Mobile · dark (hero)</div>
+    <div class="section-sub">iPhone-class device frame · bottom-tab navigation · sticky CTA.</div>
+  </div>
+  <div class="grid" id="mobile-dark-grid"></div>
+</div>
+
+<div class="section" style="background:var(--void-light);">
+  <div class="section-head">
+    <div class="eyebrow light">06 · Mobile</div>
+    <div class="section-title light">Mobile · light</div>
+    <div class="section-sub light">Same product, frosted warm-gray surfaces.</div>
+  </div>
+  <div class="grid" id="mobile-light-grid"></div>
+</div>
+
+<!-- ── DESKTOP ── -->
+<div id="desktop" class="section dark-bg" style="overflow-x:auto;">
+  <div class="section-head">
+    <div class="eyebrow">07 · Desktop · dark</div>
+    <div class="section-title">Search results</div>
+    <div class="section-sub">Product-first web app · 1200px · side nav, dense compare grid, price history.</div>
+  </div>
+  <div id="desktop-dark-grid"></div>
+</div>
+
+<div class="section" style="background:var(--void-light);overflow-x:auto;">
+  <div class="section-head">
+    <div class="eyebrow light">08 · Desktop · light</div>
+    <div class="section-title light">Search results · light</div>
+  </div>
+  <div id="desktop-light-grid"></div>
+</div>
+
+<!-- ── FOOTER ── -->
+<div class="footer">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+      <defs>
+        <linearGradient id="fg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1ED760"/><stop offset="1" stop-color="#1DB954"/></linearGradient>
+        <linearGradient id="fg2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F8A3F"/><stop offset="1" stop-color="#1DB954"/></linearGradient>
+      </defs>
+      <path d="M20 4a16 16 0 0 0 0 32V4z" fill="url(#fg1)"/>
+      <path d="M20 4a16 16 0 0 1 0 32V4z" fill="url(#fg2)" opacity=".95"/>
+      <rect x="19.25" y="4" width="1.5" height="32" fill="#191414"/>
+    </svg>
+    <span style="font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:-.6px;color:#F4F4F6;">pricely</span>
+  </div>
+  <div class="footer-meta">Design System · v0.1 · India · 2026</div>
+</div>
+
+<script>
+// ── NAV ──────────────────────────────────────────────────────────────────
+document.addEventListener('click', function(e) {
+  var pill = e.target.closest('[data-target]');
+  if (!pill) return;
+  var id = pill.getAttribute('data-target');
+  var el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior:'smooth' });
+  document.querySelectorAll('.nav-pill').forEach(function(p){ p.classList.remove('active'); });
+  pill.classList.add('active');
+});
+
+// ── SVG HELPERS ──────────────────────────────────────────────────────────
+function svgMark(type, size, bg) {
+  if (type === 'A') return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" fill="none">
+    <defs>
+      <linearGradient id="mA1-${size}-${bg}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1ED760"/><stop offset="1" stop-color="#1DB954"/></linearGradient>
+      <linearGradient id="mA2-${size}-${bg}" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F8A3F"/><stop offset="1" stop-color="#1DB954"/></linearGradient>
+    </defs>
+    <path d="M20 4a16 16 0 0 0 0 32V4z" fill="url(#mA1-${size}-${bg})"/>
+    <path d="M20 4a16 16 0 0 1 0 32V4z" fill="url(#mA2-${size}-${bg})" opacity=".95"/>
+    <rect x="19.25" y="4" width="1.5" height="32" fill="${bg==='dark'?'#191414':'#FBFAF7'}"/>
+  </svg>`;
+  if (type === 'B') return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" fill="none">
+    <defs><linearGradient id="mB-${size}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1ED760"/><stop offset="1" stop-color="#1DB954"/></linearGradient></defs>
+    <rect x="6"  y="8"  width="6" height="24" rx="2" fill="url(#mB-${size})" opacity=".5"/>
+    <rect x="14" y="14" width="6" height="18" rx="2" fill="url(#mB-${size})" opacity=".7"/>
+    <rect x="22" y="20" width="6" height="12" rx="2" fill="url(#mB-${size})" opacity=".85"/>
+    <rect x="30" y="26" width="6" height="6"  rx="2" fill="url(#mB-${size})"/>
+  </svg>`;
+  if (type === 'C') return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" fill="none">
+    <defs><linearGradient id="mC-${size}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1ED760"/><stop offset="1" stop-color="#0F8A3F"/></linearGradient></defs>
+    <rect x="2" y="2" width="36" height="36" rx="12" fill="url(#mC-${size})"/>
+    <path d="M14 12h13M14 17h13M14 12c5 0 8 3 8 5s-3 5-8 5h-1l8 8" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function wordmark(dir, color) {
+  if (dir === 'A') return `<span style="font-family:var(--f-display);font-weight:700;font-size:32px;letter-spacing:-1.2px;color:${color};line-height:1;display:inline-flex;align-items:baseline;">pr<span style="position:relative;display:inline-block;">i<span style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:4px;background:linear-gradient(135deg,#1ED760,#1DB954);"></span></span>cely</span>`;
+  if (dir === 'B') return `<span style="font-family:var(--f-display);font-weight:500;font-size:32px;letter-spacing:-0.4px;color:${color};line-height:1;">Pricely<span style="color:#1DB954;">.</span></span>`;
+  if (dir === 'C') return `<span style="display:inline-flex;align-items:baseline;gap:6px;"><span style="font-family:'Playfair Display',Georgia,serif;font-style:italic;font-weight:500;font-size:34px;letter-spacing:-0.6px;color:${color};line-height:1;">Pricely</span><span style="font-family:var(--f-mono);font-size:11px;letter-spacing:2px;color:${color};opacity:.55;text-transform:uppercase;">/in</span></span>`;
+}
+
+function platLogo(id, size) {
+  const platforms = {
+    aisle:{color:'#E94560',abbr:'Al'}, zip:{color:'#2563EB',abbr:'Zp'}, bolt:{color:'#F59E0B',abbr:'Bl'},
+    basket:{color:'#7C3AED',abbr:'Bk'}, kart:{color:'#EA580C',abbr:'Kt'}, marq:{color:'#0891B2',abbr:'Mq'},
+    vogue:{color:'#BE185D',abbr:'Vg'}, drift:{color:'#1DB954',abbr:'Dr'}, hop:{color:'#6366F1',abbr:'Hp'}, loop:{color:'#14B8A6',abbr:'Lp'},
+  };
+  const p = platforms[id] || platforms.aisle;
+  const r = Math.round(size * 0.28);
+  return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:${p.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-family:var(--f-display);font-weight:700;font-size:${Math.round(size*0.35)}px;color:#fff;">${p.abbr}</span></div>`;
+}
+
+function platName(id) {
+  const n = {aisle:'Aisle',zip:'Zip',bolt:'Bolt',basket:'Basket',kart:'Kart',marq:'Marq',vogue:'Vogue',drift:'Drift',hop:'Hop',loop:'Loop'};
+  return n[id] || id;
+}
+
+function searchBar(mode, value, size) {
+  const h = size==='lg'?64:size==='sm'?44:54;
+  const filled = value ? 'filled' : '';
+  const ph = value || 'Search across 12 platforms';
+  return `<div class="search-bar ${mode} search-h-${size}" style="height:${h}px;">
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6.5" stroke="${mode==='dark'?'rgba(246,246,248,0.66)':'rgba(20,18,15,0.62)'}" stroke-width="1.6"/><path d="M14 14l3.5 3.5" stroke="${mode==='dark'?'rgba(246,246,248,0.66)':'rgba(20,18,15,0.62)'}" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <span class="search-bar-text ${mode} ${filled}">${ph}</span>
+    <div class="search-filter-btn ${mode}">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3.5h10M4 7h6M5.5 10.5h3" stroke="${mode==='dark'?'#1DB954':'#1DB954'}" stroke-width="1.4" stroke-linecap="round"/></svg>
+    </div>
+  </div>`;
+}
+
+function saveBadge(mode, amount, pct) {
+  return `<span class="save-badge ${mode}">↓ ₹${amount}${pct?' '+pct+'%':''}</span>`;
+}
+
+function etaBadge(mode, eta) {
+  return `<span class="eta-badge ${mode}"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="${mode==='dark'?'rgba(246,246,248,0.66)':'rgba(20,18,15,0.62)'}" stroke-width="1.2"/><path d="M5 3v2l1 1" stroke="${mode==='dark'?'rgba(246,246,248,0.66)':'rgba(20,18,15,0.62)'}" stroke-width="1.2" stroke-linecap="round"/></svg>${eta}</span>`;
+}
+
+function offerBadge(mode, text) {
+  return `<span class="offer-badge ${mode}">${text}</span>`;
+}
+
+function verdictChip(mode, type, conf) {
+  const isBuy = type==='buy';
+  const icon = isBuy
+    ? `<svg width="11" height="11" viewBox="0 0 11 11"><path d="M1.5 5.5l3 3 5-6" stroke="#0A0B0E" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : `<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="3.5" stroke="#0A0B0E" stroke-width="1.5" fill="none"/><path d="M5 3.5V5l1 1" stroke="#0A0B0E" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  return `<div class="verdict ${type} ${mode}">
+    <div class="verdict-icon ${type} ${mode==='light'?'light':''}">${icon}</div>
+    <div>
+      <div class="verdict-title">${isBuy?'Buy now':'Wait — price likely to drop'}</div>
+      <div class="verdict-conf">${conf}% confidence · 30d signal</div>
+    </div>
+  </div>`;
+}
+
+function resultCard(mode, opts) {
+  const {id, price, mrp, eta, save, savePct, offer, best} = opts;
+  return `<div class="result-card ${mode}${best?' best':''}">
+    ${best?'<div class="best-badge">BEST</div>':''}
+    ${platLogo(id, 36)}
+    <div class="result-info">
+      <div class="result-plat-name ${mode}">${platName(id)}</div>
+      <div class="result-meta">
+        ${eta?etaBadge(mode, eta):''}
+        ${offer?offerBadge(mode, offer):''}
+      </div>
+      ${mrp?`<div class="result-price-row">
+        <span class="price-main ${mode} lg">₹${price}</span>
+        <span class="price-struck ${mode}">₹${mrp}</span>
+        ${save?saveBadge(mode, save, savePct):''}
+      </div>`:`<div class="price-main ${mode} md" style="margin-top:4px;">₹${price}</div>`}
+    </div>
+  </div>`;
+}
+
+function ctaBtn(label, price, savings) {
+  return `<div class="cta-btn">
+    <div style="flex:1;"><div class="cta-label">${label}</div><div class="cta-price">${price} · ${savings}</div></div>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 10h10M11 5l5 5-5 5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>`;
+}
+
+// ── SPARKLINE ─────────────────────────────────────────────────────────────
+function drawSpark(canvas, mode) {
+  const pts = [71200,70800,69400,68200,67100,65900,66400,65200,63800,63100,62499];
+  const w = canvas.width, h = canvas.height;
+  const ctx = canvas.getContext('2d');
+  const min = Math.min(...pts), max = Math.max(...pts);
+  const xOf = i => (i/(pts.length-1)) * w;
+  const yOf = v => h - ((v-min)/(max-min)) * (h-12) - 6;
+  const accent = '#1DB954';
+  ctx.clearRect(0,0,w,h);
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, 'rgba(29,185,84,0.28)');
+  grad.addColorStop(1, 'rgba(29,185,84,0)');
+  ctx.beginPath();
+  ctx.moveTo(0, h);
+  pts.forEach((v,i) => ctx.lineTo(xOf(i), yOf(v)));
+  ctx.lineTo(w, h);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.beginPath();
+  pts.forEach((v,i) => i===0 ? ctx.moveTo(xOf(i),yOf(v)) : ctx.lineTo(xOf(i),yOf(v)));
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  const lx = xOf(pts.length-1), ly = yOf(pts[pts.length-1]);
+  ctx.beginPath();
+  ctx.arc(lx, ly, 3.5, 0, Math.PI*2);
+  ctx.fillStyle = accent;
+  ctx.fill();
+}
+
+function sparkHtml(id, w, h) {
+  return `<canvas id="${id}" class="spark" width="${w}" height="${h}" style="display:block;"></canvas>`;
+}
+
+// ── TAB BAR HTML ──────────────────────────────────────────────────────────
+function tabBar(mode, active) {
+  const tabs = [{l:'Search',d:'M9 9a6 6 0 1112 0 6 6 0 01-12 0z'},{l:'Watch',d:'M4 22a8 8 0 0116 0M12 4a4 4 0 100 8 4 4 0 000-8z'},{l:'Trips',d:'M5 18h14M7 14h10l-1.5-9h-7L7 14z'},{l:'You',d:'M4 22a8 8 0 0116 0M12 4a4 4 0 100 8 4 4 0 000-8z'}];
+  const stroke = mode==='dark'?'rgba(246,246,248,0.42)':'rgba(20,18,15,0.40)';
+  const strokeA = mode==='dark'?'#F6F6F8':'#14120F';
+  return `<div class="tab-bar">
+    <div class="tab-bar-inner">
+      <div class="tab-bar-glass ${mode}"></div>
+      <div class="tab-bar-border ${mode}"></div>
+      <div class="tab-bar-tabs">
+        ${tabs.map((t,i)=>`<div class="tab${i===active?' active':''} ${mode}">
+          <svg width="20" height="20" viewBox="0 0 28 28" fill="none"><path d="${t.d}" stroke="${i===active?strokeA:stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="tab-label${i===active?' active':''} ${mode}">${t.l}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── PHONE SCREEN CONTENTS ─────────────────────────────────────────────────
+function screenHome(mode) {
+  const d = mode==='dark';
+  const text = d?'#F6F6F8':'#14120F';
+  const dim = d?'rgba(246,246,248,0.66)':'rgba(20,18,15,0.62)';
+  const faint = d?'rgba(246,246,248,0.42)':'rgba(20,18,15,0.40)';
+  const glass = d?'rgba(28,30,38,0.32)':'rgba(255,255,255,0.42)';
+  const glassBorder = d?'rgba(255,255,255,0.07)':'rgba(20,18,15,0.06)';
+  const bg = d?'var(--void-dark)':'var(--void-light)';
+  const trending = ['Amul Paneer 200g','iPhone 15','Onion 1kg','Nike Pegasus','Coke 750ml'];
+  const cats = [['Grocery','◐'],['Electronics','◢'],['Fashion','◇'],['Cabs','▷'],['Food','◯']];
+  return `<div class="screen ${mode}">
+    <div style="padding:12px 20px 14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;">
+        ${svgMark('B',26,mode)}
+        <span style="font-family:var(--f-display);font-weight:700;font-size:17px;letter-spacing:-.5px;color:${text};">pricely</span>
+        <div style="flex:1;"></div>
+        <div style="width:32px;height:32px;border-radius:16px;background:${glass};border:1px solid ${glassBorder};display:flex;align-items:center;justify-content:center;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4" r="2.5" stroke="${dim}" stroke-width="1.3"/><circle cx="7" cy="10" r="2.5" stroke="${dim}" stroke-width="1.3"/></svg>
+        </div>
+      </div>
+      <div style="font-family:var(--f-display);font-size:30px;font-weight:600;letter-spacing:-1.2px;line-height:1.05;color:${text};">Find the<br>cheapest, fastest<br><span style="background:var(--ramp-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">everything.</span></div>
+    </div>
+    <div style="padding:0 16px;">${searchBar(mode,'','lg')}</div>
+    <div class="cat-chips">
+      ${cats.map((c,i)=>`<div class="cat-chip ${mode}${i===0?' active':''}"><span style="opacity:.7;">${c[1]}</span>${c[0]}</div>`).join('')}
+    </div>
+    <div style="padding:20px 20px 8px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-family:var(--f-text);font-size:12px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:${dim};">Trending near you</span>
+      <span style="font-family:var(--f-mono);font-size:10px;color:${faint};">BLR · 12:04</span>
+    </div>
+    <div style="padding:0 16px;display:flex;flex-direction:column;gap:8px;">
+      ${trending.slice(0,3).map((q,i)=>`<div style="padding:12px 14px;border-radius:16px;background:${glass};border:1px solid ${glassBorder};display:flex;align-items:center;gap:12px;">
+        <span style="font-family:var(--f-mono);font-size:11px;color:${faint};width:18px;">0${i+1}</span>
+        <span style="flex:1;font-size:14px;font-weight:500;color:${text};">${q}</span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="${faint}" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </div>`).join('')}
+    </div>
+    <div style="flex:1;"></div>
+    ${tabBar(mode, 0)}
+  </div>`;
+}
+
+function screenResults(mode) {
+  const d = mode==='dark';
+  const text = d?'#F6F6F8':'#14120F';
+  const glass = d?'rgba(28,30,38,0.32)':'rgba(255,255,255,0.42)';
+  const glassBorder = d?'rgba(255,255,255,0.07)':'rgba(20,18,15,0.06)';
+  const offers = [
+    {id:'aisle',price:89,mrp:110,eta:'15 min',save:21,savePct:19,offer:'AISLE10',best:true},
+    {id:'zip',price:92,mrp:110,eta:'8 min',save:18,savePct:16},
+    {id:'bolt',price:96,mrp:110,eta:'10 min',save:14,savePct:13},
+    {id:'basket',price:99,mrp:110,eta:'today',save:11,savePct:10},
+  ];
+  return `<div class="screen ${mode}">
+    <div style="padding:6px 16px 10px;">${searchBar(mode,'Amul Paneer 200g','md')}</div>
+    <div style="padding:0 16px 10px;">
+      <div style="padding:14px;border-radius:22px;background:${glass};border:1px solid ${glassBorder};display:flex;align-items:center;gap:12px;">
+        <div style="width:52px;height:52px;border-radius:12px;background:${d?'#171A22':'#EFEAE3'};flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:600;color:${text};">Amul Paneer · 200g</div>
+          <div style="font-size:11.5px;color:${d?'rgba(246,246,248,0.66)':'rgba(20,18,15,0.62)'};margin-top:2px;">5 platforms · updated 12s ago</div>
+          <div style="margin-top:8px;">${verdictChip(mode,'buy',87)}</div>
+        </div>
+      </div>
+    </div>
+    <div class="sort-pills">
+      ${['Cheapest','Fastest','Best value'].map((s,i)=>`<span class="sort-pill ${mode}${i===0?' active':''}">${s}</span>`).join('')}
+    </div>
+    <div style="padding:0 16px 10px;display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto;">
+      ${offers.map(o=>resultCard(mode,o)).join('')}
+    </div>
+    <div style="padding:10px 16px 0;">${ctaBtn('Buy on Aisle','₹89','Saves ₹21')}</div>
+    ${tabBar(mode,0)}
+  </div>`;
+}
+
+function screenDetail(mode) {
+  const d = mode==='dark';
+  const text = d?'#F6F6F8':'#14120F';
+  const dim = d?'rgba(246,246,248,0.66)':'rgba(20,18,15,0.62)';
+  const faint = d?'rgba(246,246,248,0.42)':'rgba(20,18,15,0.40)';
+  const glass = d?'rgba(28,30,38,0.32)':'rgba(255,255,255,0.42)';
+  const glassBorder = d?'rgba(255,255,255,0.07)':'rgba(20,18,15,0.06)';
+  const sparkId = `spark-detail-${mode}`;
+  return `<div class="screen ${mode}">
+    <div style="padding:8px 20px 0;">
+      <div style="font-family:var(--f-mono);font-size:10.5px;color:${faint};letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Electronics · Apple</div>
+      <div style="font-family:var(--f-display);font-size:26px;font-weight:600;letter-spacing:-0.8px;color:${text};line-height:1.1;">iPhone 15 · 128GB<br><span style="color:${dim};font-weight:500;">Black Titanium</span></div>
+    </div>
+    <div style="margin:14px 16px 0;height:150px;border-radius:30px;background:${d?'radial-gradient(circle at 50% 40%,#21242E,#0E1015)':'radial-gradient(circle at 50% 40%,#EFEAE3,#F9F6F1)'};border:1px solid ${glassBorder};display:flex;align-items:center;justify-content:center;">
+      <span style="font-family:var(--f-mono);font-size:11px;color:${faint};">[ product render ]</span>
+    </div>
+    <div style="padding:14px 16px 0;">
+      <div style="padding:16px;border-radius:22px;background:${glass};border:1px solid ${glassBorder};">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px;">
+          <div>
+            <div style="font-family:var(--f-mono);font-size:10.5px;color:${faint};letter-spacing:1px;text-transform:uppercase;">Lowest right now</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
+              <span class="price-main ${mode} xl">₹62,499</span>
+              ${saveBadge(mode,'6,500',9)}
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+              ${platLogo('kart',18)}
+              <span style="font-size:12px;color:${dim};">Kart · ships tomorrow</span>
+            </div>
+          </div>
+          ${verdictChip(mode,'wait',64)}
+        </div>
+        ${sparkHtml(sparkId, 320, 60)}
+        <div style="display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:9.5px;color:${faint};margin-top:6px;">
+          <span>90d ago · ₹71,200</span><span>Today · ₹62,499</span>
+        </div>
+      </div>
+    </div>
+    <div style="padding:12px 16px 0;display:flex;flex-direction:column;gap:8px;flex:1;">
+      ${resultCard(mode,{id:'kart',price:'62,499',mrp:'68,999',eta:'Tomorrow',save:'6,500',savePct:9,best:true})}
+      ${resultCard(mode,{id:'marq',price:'63,250',mrp:'68,999',eta:'2 days',save:'5,749',savePct:8})}
+    </div>
+    ${tabBar(mode,1)}
+  </div>`;
+}
+
+function screenCab(mode) {
+  const d = mode==='dark';
+  const text = d?'#F6F6F8':'#14120F';
+  const dim = d?'rgba(246,246,248,0.66)':'rgba(20,18,15,0.62)';
+  const faint = d?'rgba(246,246,248,0.42)':'rgba(20,18,15,0.40)';
+  const glass = d?'rgba(28,30,38,0.32)':'rgba(255,255,255,0.42)';
+  const glassBorder = d?'rgba(255,255,255,0.07)':'rgba(20,18,15,0.06)';
+  const save = d?'#5BE3A0':'#1E9F6E';
+  const accentSoft = d?'rgba(29,185,84,0.12)':'rgba(29,185,84,0.10)';
+  const accent = '#1DB954';
+  const cabs = [
+    {id:'drift',tier:'Mini',price:312,eta:'4 min',save:88,best:true,offer:'DRIFT100 applied'},
+    {id:'hop',tier:'Go',price:348,eta:'6 min',save:52},
+    {id:'loop',tier:'Auto',price:218,eta:'9 min',save:0},
+  ];
+  return `<div class="screen ${mode}">
+    <div style="padding:8px 20px 14px;">
+      <div style="font-family:var(--f-mono);font-size:10.5px;color:${faint};letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">One-time fare check</div>
+      <div style="font-family:var(--f-display);font-size:26px;font-weight:600;letter-spacing:-0.8px;color:${text};">Airport drop<br><span style="color:${dim};font-weight:500;font-size:18px;">HSR Layout → BLR T1</span></div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <div style="padding:6px 12px;border-radius:999px;background:${glass};border:1px solid ${glassBorder};font-size:12px;color:${dim};">Now · 18.4 km</div>
+        <div style="padding:6px 12px;border-radius:999px;background:${glass};border:1px solid ${glassBorder};font-size:12px;color:${dim};">4 platforms</div>
+      </div>
+    </div>
+    <div style="margin:0 16px 12px;height:110px;border-radius:30px;background:${d?'rgba(29,185,84,0.08)':'rgba(29,185,84,0.05)'};border:1px solid ${glassBorder};display:flex;align-items:center;justify-content:center;">
+      <span style="font-family:var(--f-mono);font-size:11px;color:${faint};">[ route map ]</span>
+    </div>
+    <div style="padding:0 16px;display:flex;flex-direction:column;gap:10px;flex:1;overflow-y:auto;">
+      ${cabs.map((c,i)=>`<div style="padding:14px 16px;border-radius:22px;background:${i===0?accentSoft:glass};border:1px solid ${i===0?'rgba(29,185,84,0.35)':glassBorder};display:flex;align-items:center;gap:12px;">
+        ${platLogo(c.id,40)}
+        <div style="flex:1;">
+          <div style="font-size:13.5px;font-weight:600;color:${text};">${platName(c.id)} ${c.tier}</div>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            ${etaBadge(mode,c.eta)}
+            ${c.offer?offerBadge(mode,c.offer):''}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:var(--f-mono);font-size:20px;font-weight:600;color:${text};">₹${c.price}</div>
+          ${c.save>0?`<div style="font-family:var(--f-mono);font-size:10px;color:${save};margin-top:2px;">↓ ₹${c.save}</div>`:''}
+        </div>
+      </div>`).join('')}
+    </div>
+    <div style="padding:10px 16px 0;">${ctaBtn('Book on Drift','₹312','Saves ₹88')}</div>
+    ${tabBar(mode,2)}
+  </div>`;
+}
+
+function makePhone(mode, content, sparkFn) {
+  const d = mode==='dark';
+  const statusColor = d?'#F6F6F8':'#14120F';
+  const html = `<div class="phone ${mode}">
+    <div class="phone-status">
+      <span class="phone-time ${mode}">9:41</span>
+      <div class="phone-pill"></div>
+      <div style="display:flex;gap:5px;align-items:center;">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+          <rect x="0" y="4" width="3" height="8" rx="1" fill="${statusColor}"/>
+          <rect x="4" y="2" width="3" height="10" rx="1" fill="${statusColor}"/>
+          <rect x="8" y="0" width="3" height="12" rx="1" fill="${statusColor}"/>
+          <rect x="12" y="0" width="3" height="12" rx="1" fill="${statusColor}" opacity=".3"/>
+        </svg>
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
+          <rect x="0" y="1" width="14" height="10" rx="2.5" stroke="${statusColor}" stroke-width="1.2"/>
+          <rect x="15" y="3.5" width="2" height="5" rx="1" fill="${statusColor}" opacity=".4"/>
+          <rect x="1.5" y="2.5" width="10" height="7" rx="1.5" fill="${statusColor}"/>
+        </svg>
+      </div>
+    </div>
+    <div class="phone-screen">${content}</div>
+  </div>`;
+  return { html, sparkFn };
+}
+
+// ── DESKTOP SHELL ─────────────────────────────────────────────────────────
+function desktopShell(mode) {
+  const d = mode==='dark';
+  const text = d?'#F6F6F8':'#14120F';
+  const dim = d?'rgba(246,246,248,0.66)':'rgba(20,18,15,0.62)';
+  const faint = d?'rgba(246,246,248,0.42)':'rgba(20,18,15,0.40)';
+  const glass = d?'rgba(28,30,38,0.32)':'rgba(255,255,255,0.42)';
+  const glassBorder = d?'rgba(255,255,255,0.07)':'rgba(20,18,15,0.06)';
+  const bg2 = d?'#171A22':'#FFFFFF';
+  const sparkId = `spark-desktop-${mode}`;
+  const navItems = ['Search','Watchlist','Trips','Alerts','Settings'];
+  const icons = [
+    'M9 9a6 6 0 1112 0 6 6 0 01-12 0z',
+    'M3 6h18M5 6v13a2 2 0 002 2h10a2 2 0 002-2V6',
+    'M5 18h14M7 14h10l-1.5-9h-7z',
+    'M5 18l1.5-2V13a5.5 5.5 0 1111 0v3l1.5 2z',
+    'M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7z',
+  ];
+  const results = [
+    {id:'aisle',price:89,mrp:110,eta:'15 min',save:21,savePct:19,best:true},
+    {id:'zip',price:92,mrp:110,eta:'8 min',save:18,savePct:16},
+    {id:'bolt',price:96,mrp:110,eta:'10 min',save:14,savePct:13},
+    {id:'basket',price:99,mrp:110,eta:'today',save:11,savePct:10},
+    {id:'kart',price:110,eta:'2 days'},
+  ];
+  return `<div class="desktop-shell ${mode}">
+    <div class="desktop-nav ${mode}">
+      <div class="desktop-logo-row">
+        ${svgMark('B',26,mode)}
+        <span class="desktop-nav-wordmark ${mode}">pricely</span>
+        <span class="desktop-badge ${mode}">IN</span>
+      </div>
+      <div class="desktop-cmd ${mode}">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="${dim}" stroke-width="1.4"/><path d="M9.5 9.5L13 13" stroke="${dim}" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span class="desktop-cmd-text" style="color:${dim};">Quick search</span>
+        <span class="desktop-cmd-kbd ${mode}">⌘K</span>
+      </div>
+      ${navItems.map((n,i)=>`<div class="desktop-nav-item ${mode}${i===0?' active':''}">
+        <svg width="18" height="18" viewBox="0 0 28 28" fill="none"><path d="${icons[i]}" stroke="${i===0?'#1DB954':dim}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="desktop-nav-label${i===0?' active':''}" style="color:${i===0?'#1DB954':dim};">${n}</span>
+      </div>`).join('')}
+      <div style="flex:1;"></div>
+      <div class="desktop-nav-user ${mode}">
+        <div class="desktop-user-avatar">RK</div>
+        <div>
+          <div class="desktop-user-name ${mode}">Rohit Kumar</div>
+          <div class="desktop-user-sub ${mode}">Pro · BLR</div>
+        </div>
+      </div>
+    </div>
+    <div class="desktop-content">
+      <div class="desktop-topbar ${mode}">
+        ${searchBar(mode,'Amul Paneer 200g','md')}
+        <div class="desktop-filter-row">
+          ${['All','Grocery','Electronics','Cabs','Fashion'].map((c,i)=>`<span class="desktop-filter-pill ${mode}${i===0?' active':''}">${c}</span>`).join('')}
+          <div style="flex:1;"></div>
+          <span class="desktop-filter-pill ${mode}" style="margin-left:auto;">Sort: Cheapest ↓</span>
+        </div>
+      </div>
+      <div class="desktop-main">
+        <div class="desktop-results">
+          <div class="desktop-results-header">
+            <div>
+              <span class="desktop-results-title ${mode}">Amul Paneer · 200g</span>
+              <span class="desktop-results-meta ${mode}">5 platforms · 12s ago</span>
+            </div>
+            ${verdictChip(mode,'buy',87)}
+          </div>
+          ${results.map(r=>resultCard(mode,r)).join('')}
+        </div>
+        <div class="desktop-sidebar">
+          <div class="desktop-side-card ${mode}">
+            <div class="desktop-side-label ${mode}">Price history · 90 days</div>
+            ${sparkHtml(sparkId, 240, 80)}
+            <div style="display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:${faint};margin-top:6px;">
+              <span>₹110</span><span>₹89 now</span>
+            </div>
+          </div>
+          <div class="desktop-side-card ${mode}">
+            <div class="desktop-side-label ${mode}">Set price alert</div>
+            <div class="desktop-input ${mode}">₹ 82</div>
+            <div style="padding:10px 14px;border-radius:16px;background:var(--ramp-accent);color:#fff;font-family:var(--f-text);font-size:13px;font-weight:600;text-align:center;cursor:pointer;">Set alert</div>
+          </div>
+          <div class="desktop-side-card ${mode}">
+            <div class="desktop-side-label ${mode}">Quick compare</div>
+            ${['aisle','zip','bolt'].map(id=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              ${platLogo(id,28)}
+              <span style="flex:1;font-size:12px;color:${dim};">${platName(id)}</span>
+              <span style="font-family:var(--f-mono);font-size:13px;font-weight:600;color:${text};">₹${id==='aisle'?89:id==='zip'?92:96}</span>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── BUILD BRAND SECTION ───────────────────────────────────────────────────
+function buildBrand() {
+  const dirs = [
+    {mark:'A',word:'A',label:'Direction A · Geometric',note:'Split-lens mark for "compare" · tight tracking'},
+    {mark:'B',word:'B',label:'Direction B · Soft humanist',note:'Descending bars = lowest price · daily-use'},
+    {mark:'C',word:'C',label:'Direction C · Editorial',note:'Italic serif · India-rooted ₹ glyph · fintech-adjacent'},
+  ];
+  ['dark','light'].forEach(mode => {
+    const color = mode==='dark'?'#F4F4F6':'#14120F';
+    const bg = mode==='dark'?'rgba(28,30,38,0.32)':'rgba(255,255,255,0.42)';
+    const border = mode==='dark'?'rgba(255,255,255,0.07)':'rgba(20,18,15,0.06)';
+    const bgPanel = mode==='dark'?'var(--void-dark)':'var(--void-light)';
+    const html = `<div class="brand-panel ${mode}" style="width:660px;">
+      <div style="font-family:var(--f-mono);font-size:10.5px;color:${mode==='dark'?'rgba(246,246,248,.4)':'rgba(20,18,15,.4)'};letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px;">Brand · ${mode}</div>
+      ${dirs.map(d=>`<div class="brand-row ${mode}">
+        ${svgMark(d.mark, 52, mode)}
+        <div>${wordmark(d.word, color)}</div>
+        <div>
+          <div class="brand-note-label ${mode}">${d.label}</div>
+          <div class="brand-note-desc ${mode}">${d.note}</div>
+        </div>
+      </div>`).join('')}
+    </div>`;
+    const wrap = document.createElement('div');
+    wrap.className = 'ab';
+    wrap.innerHTML = `<div class="ab-label">${mode}</div><div class="ab-frame" style="border-radius:30px;">${html}</div>`;
+    document.getElementById('brand-grid').appendChild(wrap);
+  });
+}
+
+// ── BUILD TOKEN SECTION ───────────────────────────────────────────────────
+function buildTokens() {
+  ['dark','light'].forEach(mode => {
+    const t = {
+      dark: {bg0:'#07080B',bg1:'#0E1015',bg2:'#171A22',bg3:'#21242E',glass:'rgba(28,30,38,0.32)',glassStrong:'rgba(34,36,46,0.55)',text:'#F6F6F8',textDim:'rgba(246,246,248,0.66)',textFaint:'rgba(246,246,248,0.42)',line:'rgba(255,255,255,0.07)',line2:'rgba(255,255,255,0.12)',glassBorder:'rgba(255,255,255,0.07)',accent:'#1DB954',accent2:'#1ED760',save:'#5BE3A0',warn:'#FFC062',danger:'#FF6680',info:'#7CC8FF'},
+      light:{bg0:'#F2EEE8',bg1:'#F9F6F1',bg2:'#FFFFFF',bg3:'#EFEAE3',glass:'rgba(255,255,255,0.42)',glassStrong:'rgba(255,255,255,0.65)',text:'#14120F',textDim:'rgba(20,18,15,0.62)',textFaint:'rgba(20,18,15,0.40)',line:'rgba(20,18,15,0.07)',line2:'rgba(20,18,15,0.12)',glassBorder:'rgba(20,18,15,0.06)',accent:'#1DB954',accent2:'#0F8A3F',save:'#1E9F6E',warn:'#C68A2E',danger:'#D8284A',info:'#3A7FBF'},
+    }[mode];
+    const groups = [
+      {label:'Surfaces',keys:['bg0','bg1','bg2','bg3','glass','glassStrong']},
+      {label:'Text & Lines',keys:['text','textDim','textFaint','line','line2','glassBorder']},
+      {label:'Accent & Semantic',keys:['accent','accent2','save','warn','danger','info']},
+    ];
+    const faint = mode==='dark'?'rgba(246,246,248,.4)':'rgba(20,18,15,.4)';
+    const html = `<div class="token-panel ${mode}" style="width:620px;">
+      <div style="font-family:var(--f-mono);font-size:10.5px;color:${faint};letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px;">Color tokens · ${mode}</div>
+      ${groups.map(g=>`
+        <div class="token-group-label ${mode}">${g.label}</div>
+        <div class="swatch-grid">
+          ${g.keys.map(k=>`<div class="swatch ${mode}">
+            <div class="swatch-color" style="background:${t[k]||'transparent'};"></div>
+            <div class="swatch-label ${mode}">
+              <div class="swatch-name ${mode}">${k}</div>
+              <div class="swatch-val ${mode}">${String(t[k]).substring(0,18)}</div>
+            </div>
+          </div>`).join('')}
+        </div>
+      `).join('')}
+      <div class="token-group-label ${mode}">Gradient ramps</div>
+      <div class="ramp-grid">
+        <div class="ramp-pill" style="background:var(--ramp-accent);color:#fff;">rampAccent · green</div>
+        <div class="ramp-pill" style="background:var(--ramp-save);color:#0A0B0E;">rampSave · bright→deep</div>
+      </div>
+    </div>`;
+    const wrap = document.createElement('div');
+    wrap.className = 'ab';
+    wrap.innerHTML = `<div class="ab-label">${mode}</div><div class="ab-frame" style="border-radius:30px;">${html}</div>`;
+    document.getElementById('token-grid').appendChild(wrap);
+  });
+}
+
+// ── BUILD TYPE & GLASS ────────────────────────────────────────────────────
+function buildTypeGlass() {
+  const sizes = [
+    ['Display XL',52,700,-1.6,'Find anything, cheaper.'],
+    ['Display L',36,600,-1.2,'iPhone 15 · 128GB Titanium'],
+    ['Display M',26,600,-0.8,'Across 5 platforms'],
+    ['Title',18,600,-0.4,'Watching · 4 items'],
+    ['Body',14,450,-0.1,'Cheapest on Aisle, ships in 15 min'],
+    ['Caption',11,500,0,'Updated 12 seconds ago'],
+  ];
+  const typeHtml = `<div class="type-panel">
+    <div style="font-family:var(--f-mono);font-size:10.5px;color:rgba(246,246,248,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px;">Type scale · Display / Text / Mono</div>
+    ${sizes.map(([n,sz,w,ls,s])=>`<div class="type-row">
+      <span class="type-meta">${n}</span>
+      <span class="type-meta">${sz}px</span>
+      <span class="type-meta">${w}/${ls}ls</span>
+      <span style="font-family:var(--f-display);font-size:${sz}px;font-weight:${w};letter-spacing:${ls}px;color:#F6F6F8;line-height:1.05;">${s}</span>
+    </div>`).join('')}
+    <div class="mono-specimen">
+      <div style="font-family:var(--f-mono);font-size:10px;color:rgba(246,246,248,.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Mono · prices, ETA, codes</div>
+      <div style="display:flex;gap:24px;align-items:baseline;">
+        <span style="font-family:var(--f-mono);font-size:28px;font-weight:500;color:#F6F6F8;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;">₹62,499</span>
+        <span style="font-family:var(--f-mono);font-size:14px;color:#5BE3A0;">↓ ₹6,500 (9%)</span>
+        <span style="font-family:var(--f-mono);font-size:12px;color:rgba(246,246,248,0.66);letter-spacing:.5px;">ETA · 15:42</span>
+      </div>
+    </div>
+  </div>`;
+
+  const radii = [{k:'xs',v:8},{k:'sm',v:12},{k:'md',v:16},{k:'lg',v:22},{k:'xl',v:30},{k:'xxl',v:38},{k:'pill',v:999}];
+  const levels = [{label:'glassThin',blur:12,bg:'rgba(255,255,255,0.04)'},{label:'glass',blur:28,bg:'rgba(28,30,38,0.32)'},{label:'glassStrong',blur:40,bg:'rgba(34,36,46,0.55)'}];
+  const glassHtml = `<div class="glass-panel" style="width:640px;">
+    <div class="glass-panel-blob"></div>
+    <div style="position:relative;z-index:1;">
+      <div style="font-family:var(--f-mono);font-size:10.5px;color:rgba(246,246,248,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px;">Liquid glass · Depth · Radius · Blur</div>
+      <div class="glass-levels">
+        ${levels.map(l=>`<div class="glass-level" style="background:${l.bg};backdrop-filter:blur(${l.blur}px) saturate(180%);-webkit-backdrop-filter:blur(${l.blur}px) saturate(180%);">
+          <div style="font-family:var(--f-mono);font-size:10px;color:rgba(246,246,248,.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">${l.label}</div>
+          <div style="font-family:var(--f-mono);font-size:12px;color:#F6F6F8;">blur(${l.blur}px)</div>
+          <div style="font-family:var(--f-mono);font-size:11px;color:rgba(246,246,248,.66);margin-top:2px;">sat(180%)</div>
+        </div>`).join('')}
+      </div>
+      <div style="font-family:var(--f-text);font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:rgba(246,246,248,.66);margin-bottom:12px;">Radius scale</div>
+      <div class="radius-row">
+        ${radii.filter(r=>r.v<=38).map(r=>`<div class="radius-box">
+          <div class="radius-box-inner" style="width:${Math.min(r.v*2+16,64)}px;height:40px;border-radius:${r.v}px;"></div>
+          <div style="font-family:var(--f-mono);font-size:9.5px;color:rgba(246,246,248,.4);">${r.k}</div>
+          <div style="font-family:var(--f-mono);font-size:9px;color:rgba(246,246,248,.4);">${r.v}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  const grid = document.getElementById('typeglass-grid');
+  const t1 = document.createElement('div'); t1.className='ab';
+  t1.innerHTML=`<div class="ab-label">Type scale</div><div class="ab-frame" style="border-radius:30px;">${typeHtml}</div>`;
+  const t2 = document.createElement('div'); t2.className='ab';
+  t2.innerHTML=`<div class="ab-label">Liquid glass · radius · blur</div><div class="ab-frame" style="border-radius:30px;">${glassHtml}</div>`;
+  grid.appendChild(t1); grid.appendChild(t2);
+}
+
+// ── BUILD COMPONENTS ──────────────────────────────────────────────────────
+function buildComponents() {
+  ['dark','light'].forEach(mode => {
+    const d = mode==='dark';
+    const dim = d?'rgba(246,246,248,0.66)':'rgba(20,18,15,0.62)';
+    const glass = d?'rgba(28,30,38,0.32)':'rgba(255,255,255,0.42)';
+    const gb = d?'rgba(255,255,255,0.07)':'rgba(20,18,15,0.06)';
+    const faint = d?'rgba(246,246,248,.4)':'rgba(20,18,15,.4)';
+    const text = d?'#F6F6F8':'#14120F';
+
+    const html = `<div class="comp-panel ${mode}">
+      <div style="font-family:var(--f-mono);font-size:10.5px;color:${faint};letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px;">UI components · ${mode}</div>
+      
+      <div class="comp-block">
+        <div class="comp-section-label ${mode}">SEARCH BAR</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${searchBar(mode,'Amul Paneer 200g','lg')}
+          ${searchBar(mode,'','md')}
+        </div>
+      </div>
+
+      <div class="comp-block">
+        <div class="comp-section-label ${mode}">PLATFORM PILLS</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${['aisle','zip','bolt','kart','drift'].map(id=>`<div class="plat-pill ${mode}">${platLogo(id,22)}<span class="plat-pill-name">${platName(id)}</span></div>`).join('')}
+        </div>
+      </div>
+
+      <div class="comp-block">
+        <div class="comp-section-label ${mode}">PRICE · SAVE · ETA</div>
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+          <span class="price-main ${mode} xl">₹62,499</span>
+          <span class="price-struck ${mode}">₹68,999</span>
+          ${saveBadge(mode,'6,500',9)}
+          ${etaBadge(mode,'15 min')}
+          ${etaBadge(mode,'2 days')}
+        </div>
+      </div>
+
+      <div class="comp-block">
+        <div class="comp-section-label ${mode}">VERDICT CHIPS</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          ${verdictChip(mode,'buy',87)}
+          ${verdictChip(mode,'wait',64)}
+        </div>
+      </div>
+
+      <div class="comp-block">
+        <div class="comp-section-label ${mode}">RESULT CARDS</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${resultCard(mode,{id:'aisle',price:89,mrp:110,eta:'15 min',save:21,savePct:19,offer:'AISLE10',best:true})}
+          ${resultCard(mode,{id:'zip',price:92,mrp:110,eta:'8 min',save:18,savePct:16})}
+        </div>
+      </div>
+
+      <div class="comp-block">
+        <div class="comp-section-label ${mode}">CTA BUTTONS</div>
+        <div style="display:flex;gap:12px;">
+          ${ctaBtn('Buy on Aisle','₹89','Saves ₹21')}
+          <div style="flex:1;padding:14px 18px;border-radius:22px;background:${glass};border:1px solid ${gb};display:flex;align-items:center;gap:10px;">
+            <div style="flex:1;">
+              <div style="font-size:11px;color:${dim};text-transform:uppercase;letter-spacing:.6px;">Watch</div>
+              <div style="font-family:var(--f-display);font-size:17px;font-weight:700;color:${text};">Alert at ₹85</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 13l1.5-2V8a4.5 4.5 0 119 0v3l1.5 2H3zM7 15a2 2 0 004 0" stroke="${d?'#1DB954':'#1DB954'}" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>`;
+    const wrap = document.createElement('div'); wrap.className='ab';
+    wrap.innerHTML=`<div class="ab-label">${mode}</div><div class="ab-frame" style="border-radius:30px;">${html}</div>`;
+    document.getElementById('comp-grid').appendChild(wrap);
+  });
+}
+
+// ── BUILD MOBILE ──────────────────────────────────────────────────────────
+function buildMobile() {
+  const sparkIds = [];
+  ['dark','light'].forEach(mode => {
+    const gridId = `mobile-${mode}-grid`;
+    const screens = [
+      {label:'01 · Home',    html: screenHome(mode)},
+      {label:'02 · Results', html: screenResults(mode)},
+      {label:'03 · Detail',  html: screenDetail(mode)},
+      {label:'04 · Cabs',    html: screenCab(mode)},
+    ];
+    const statusColor = mode==='dark'?'#F6F6F8':'#14120F';
+    screens.forEach(s => {
+      const wrap = document.createElement('div'); wrap.className='ab';
+      const labelClass = `ab-label${mode==='light'?' light':''}`;
+      wrap.innerHTML=`<div class="${labelClass}">${s.label}</div>
+        <div class="phone ${mode}">
+          <div class="phone-status">
+            <span class="phone-time ${mode}">9:41</span>
+            <div class="phone-pill"></div>
+            <div style="display:flex;gap:5px;align-items:center;">
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+                <rect x="0" y="4" width="3" height="8" rx="1" fill="${statusColor}"/>
+                <rect x="4" y="2" width="3" height="10" rx="1" fill="${statusColor}"/>
+                <rect x="8" y="0" width="3" height="12" rx="1" fill="${statusColor}"/>
+                <rect x="12" y="0" width="3" height="12" rx="1" fill="${statusColor}" opacity=".3"/>
+              </svg>
+              <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
+                <rect x="0" y="1" width="14" height="10" rx="2.5" stroke="${statusColor}" stroke-width="1.2"/>
+                <rect x="15" y="3.5" width="2" height="5" rx="1" fill="${statusColor}" opacity=".4"/>
+                <rect x="1.5" y="2.5" width="10" height="7" rx="1.5" fill="${statusColor}"/>
+              </svg>
+            </div>
+          </div>
+          <div class="phone-screen">${s.html}</div>
+        </div>`;
+      document.getElementById(gridId).appendChild(wrap);
+      const canvas = wrap.querySelector('canvas.spark');
+      if (canvas) sparkIds.push(canvas.id);
+    });
+  });
+  // draw sparks after DOM insertion
+  requestAnimationFrame(() => {
+    sparkIds.forEach(id => {
+      const c = document.getElementById(id);
+      if (c) drawSpark(c, id.includes('light')?'light':'dark');
+    });
+  });
+}
+
+// ── BUILD DESKTOP ─────────────────────────────────────────────────────────
+function buildDesktop() {
+  ['dark','light'].forEach(mode => {
+    const gridId = `desktop-${mode}-grid`;
+    const wrap = document.createElement('div'); wrap.className='ab';
+    const labelClass = `ab-label${mode==='light'?' light':''}`;
+    wrap.innerHTML=`<div class="${labelClass}">Search results · ${mode}</div>
+      <div class="ab-frame" style="border-radius:38px;display:inline-block;">${desktopShell(mode)}</div>`;
+    document.getElementById(gridId).appendChild(wrap);
+    requestAnimationFrame(() => {
+      const c = document.getElementById(`spark-desktop-${mode}`);
+      if (c) drawSpark(c, mode);
+    });
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+buildBrand();
+buildTokens();
+buildTypeGlass();
+buildComponents();
+buildMobile();
+buildDesktop();
+</script>
+</body>
+</html>

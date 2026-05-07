@@ -1,20 +1,83 @@
+---
+description: Design system rules — tokens, glass system, typography, brand, motion. Read docs/design/pricely-design-system.html before any UI work.
+globs: ["src/components/**/*", "src/styles/**/*", "src/app/**/*.css"]
+alwaysApply: false
+---
+
 # Design System Rules
 
-## Source of Truth
-- Enforce `docs/design/design-system-contract.md`.
-- Treat archived design files as reference artifacts, not runtime code.
+## Sources of Truth
+Before creating or editing any component, style, or layout:
+1. Read `docs/design/design-system-contract.md`
+2. Open `docs/design/pricely-design-system.html` in a browser
+
+## Brand: Logo and Wordmark
+- **Mark**: Direction B — four descending vertical bars, gradient fill `#1ED760 → #1DB954`
+  - Bar specs (left to right): `x=6 y=8 h=24 op=0.5` · `x=14 y=14 h=18 op=0.7` · `x=22 y=20 h=12 op=0.85` · `x=30 y=26 h=6 op=1.0`
+  - Each bar: `width=6 rx=2`, viewBox `0 0 40 40`
+- **Wordmark**: `Pricely.` — Inter Tight weight 500, letter-spacing -0.4px, trailing `.` uses `var(--accent)`
+- The split-circle (Direction A) mark is not used anywhere in production UI.
 
 ## Token Usage
-- Use token variables for spacing, radius, color, typography, and state.
-- Do not hardcode ad hoc values in components unless first added to tokens.
+- Every color, spacing, radius, shadow, and glass value must reference a CSS variable from `src/styles/tokens.css`.
+- No hardcoded hex values in any component or style file.
+- No spacing values outside the approved 4px-grid steps: `2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56`.
+- No radius values outside the canonical scale: `xs=8, sm=12, md=16, lg=22, xl=30, xxl=38, pill=9999`.
 
-## Canonical Decisions
-- Accent family: green (`#1DB954`, `#1ED760`).
-- Radius scale: `8, 12, 16, 22, 30, pill`.
-- Spacing grid: 4px base and approved steps only.
-- Numeric UI must use mono/tabular numerals.
+## Glass System
+Three depth levels — never use bare `backdrop-filter` in component code:
 
-## UI Behavior
-- Dark theme is primary baseline.
-- Accent use must indicate action/state importance, not decoration.
-- Support keyboard focus and reduced-motion behavior in all new interactive UI.
+| Level | Token | Blur | Background (dark) | Use for |
+|---|---|---|---|---|
+| Thin | `--glass-thin` | 12px | `rgba(255,255,255,0.04)` | Subtle inner containers |
+| Default | `--glass` | 28px | `rgba(28,30,38,0.32)` | Standard cards and panels |
+| Strong | `--glass-strong` | 40px | `rgba(34,36,46,0.55)` | Search bars, tab bar, modals |
+
+**`<GlassCard>` is mandatory for all glass surfaces.** Never use a plain `<div>` with `backdropFilter`.
+
+### Glass CSS pseudo-element pattern (used inside GlassCard):
+```css
+.glass-surface::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  background: var(--glass);
+  backdrop-filter: blur(28px) saturate(180%) brightness(1.05);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 6px 20px -16px rgba(0,0,0,0.45);
+  z-index: 0;
+}
+.glass-surface::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  border: 1px solid var(--glass-border);
+  pointer-events: none; z-index: 2;
+}
+.glass-surface .content { position: relative; z-index: 3; }
+```
+
+## Typography
+Three font roles only — never mix them:
+- `var(--f-display)`: Inter Tight — headings, product names, large display text
+- `var(--f-text)`: Inter — body copy, labels, nav items, controls
+- `var(--f-mono)`: JetBrains Mono — **all prices, savings, ETA, timestamps, codes, counters**
+
+**Price formatting**: always `₹${n.toLocaleString('en-IN')}` — never raw numbers, never non-INR locale.
+**Timestamp formatting**: always `formatDistanceToNow(new Date(date))` from `date-fns` — never raw ISO strings.
+**All numeric UI**: must include `font-variant-numeric: tabular-nums`.
+
+## Semantic Color Usage
+- `var(--accent)` / `var(--accent2)`: active states, primary CTAs, buy verdict chip — not decoration
+- `var(--save)` / `var(--save-soft)`: price drops, savings amounts, positive deltas
+- `var(--warn)` / `var(--warn-soft)`: wait verdict chip, price increases above average
+- `var(--danger)`: price increases above added price (watchlist), out of stock
+- Never use accent green to indicate savings — use `var(--save)` instead
+
+## Motion Rules
+- All transitions: 120–180ms duration. No decorative or continuous animation.
+- Every motion component must respect `prefers-reduced-motion: reduce`.
+- Page enter: `opacity: 0→1, y: 12→0, duration: 220ms, ease: [0.16, 1, 0.3, 1]`
+- List stagger: `staggerChildren: 0.04`
+- Card sort reorder: Framer Motion `layout` prop + `layoutId={`card-${platform}`}`
+- BEST card mount: `animation: bestPulse 1.8s ease-out 1` (CSS keyframe, plays once)
+
+## Themes
+- Dark is the primary baseline. All components must work correctly in dark theme.
+- Light theme is optional parity — implement with `[data-theme="light"]` CSS var overrides.
+- Theme switching via `next-themes`, `attribute="data-theme"`, `defaultTheme="dark"`.

@@ -1,20 +1,63 @@
+---
+description: Agent execution model, read-before-edit checklist, phase order, mock-to-production progression, and safety rules.
+globs: ["**/*"]
+alwaysApply: true
+---
+
 # Agent Behavior
 
+## Read-Before-Edit Checklist
+Before touching any file, confirm you have read the relevant reference:
+
+| File type | Must read first |
+|---|---|
+| Any component or style file | `docs/design/design-system-contract.md` + `docs/design/pricely-design-system.html` |
+| Any page or layout file | `PLAN_FRONTEND.md` |
+| Any API route or scraper file | `PLAN_BACKEND.md` |
+| Any dependency change | `TECH_STACK.md` |
+| Any token or CSS variable | `DESIGN_TOKENS.md` + `src/styles/tokens.css` |
+
 ## Execution Model
-- Audit first, then implement.
-- Remove dead/obsolete code before introducing new files.
-- Keep changes small, explicit, and aligned with architecture rules.
+- Audit first, then implement. Read a file before editing it.
+- Remove dead or obsolete code before introducing new files.
+- Work in phase order — never skip ahead while an earlier phase has incomplete work:
+  1. Foundation (tokens, types, utils)
+  2. Shared UI primitives
+  3. App shell and navigation
+  4. Pages (mock-API-backed)
+  5. API route contracts
+  6. Data infrastructure (Supabase, Redis)
+  7. External provider integrations
+  8. Alerts, auth, cron, verdict engine
+
+## Mock → Production Progression
+- All API routes start with mock data that exactly matches the `src/types/index.ts` contract.
+- Replace mocks with real providers one platform at a time, in order (easiest to hardest).
+- Keep mock fallback paths active behind environment variable checks:
+  ```typescript
+  if (!process.env.SCRAPER_SERVICE_URL) return MOCK_PRICES
+  ```
+- Local development must never require live credentials to run.
 
 ## Editing Policy
-- Do not edit unrelated files.
-- Do not introduce temporary scaffolds that remain unused.
-- Prefer reusable shared modules before duplication.
+- Do not edit files outside the declared scope of the current task.
+- Do not leave unused imports, dead variables, commented-out code, or `// TODO` comments in committed files.
+- Extend shared modules before creating feature-local duplicates.
+- When in doubt whether a component is shared or feature-local, put it in `src/components/` first.
 
 ## Verification Policy
-- Run lint, typecheck, and build after substantive edits.
-- Fix introduced issues before finalizing.
-- Summarize changes in terms of removed, reorganized, and enforced standards.
+- Ask the user for approval before running `npm run lint`, `npx tsc --noEmit`, or `npm run build`.
+- Fix all introduced lint and type errors before declaring a phase complete.
+- At the end of each phase, summarize: what was **added**, what was **deleted**, what was **changed**, and what **lint/type status** is.
+
+## Files That Are Never Modified
+- `docs/design/design-system-contract.md`
+- `docs/design/pricely-design-system.html`
+- `docs/design/ios-frame.jsx`
+- `package.json`, `tsconfig.json`, `next.config.*`, `.env*`, `.gitignore`
+- Any file under `docs/` that is a design reference artifact
 
 ## Safety
-- Avoid destructive git operations unless explicitly requested.
-- Preserve user-authored work that is outside requested scope.
+- Never run destructive git operations (`reset --hard`, `push --force`, `clean -fd`) unless the user explicitly requests it by name.
+- Never commit environment variable files.
+- Preserve all `.cursor/rules/` files — they are the persistent agent instructions for this project.

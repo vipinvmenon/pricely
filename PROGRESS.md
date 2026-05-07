@@ -1,254 +1,185 @@
-# Pricely — Implementation Progress
+# Pricely — Rewrite Progress
 
-> Full plan: `docs/PRODUCT_PLAN.md`
-> Update this file as each item is completed.
-
----
-
-## Legend
-- `[x]` Completed
-- `[ ]` Pending
-- `[~]` In progress
+**Rewrite initiated:** May 2026  
+**Baseline runtime:** Next.js 16 · React 19 · pnpm  
+**Design references:** `docs/design/design-system-contract.md` · `docs/design/pricely-design-system.html`
 
 ---
 
-## Phase 0 — Repository Foundation
-*All done. Clean repo, src architecture, token scaffold, rules, AGENTS.md.*
+## Phase 0 — Audit and Deletion Inventory
+> Enumerate all files to delete or overwrite. Produce replacement list before any edits.
 
-- [x] Repository cleaned of template noise
-- [x] `src/` architecture folders created
-- [x] `src/styles/tokens.css` — initial token set
-- [x] `tsconfig.json` — `@/*` path alias → `src/*`
-- [x] `eslint.config.mjs` — docs/design excluded, lint clean
-- [x] Build passing
-- [x] Design system contract — `docs/design/design-system-contract.md`
-- [x] Cursor rules — `.cursor/rules/00-06.mdc`
-- [x] `AGENTS.md` — operating manual
-- [x] `README.md` — project-specific
-- [x] `docs/PRODUCT_PLAN.md` — this implementation plan
+- [x] List all source files under `app/`, `src/` excluding `node_modules`, `.next`, `.git`
+- [x] Read existing route pages: `layout.tsx`, `page.tsx`, `search`, `cabs`, `watchlist`, `alerts`, `profile`, `settings`, `item/[id]`
+- [x] Read existing components: `src/components/ui/**`, `src/components/layout/**`
+- [x] Read existing styles: `src/styles/**`
+- [x] Read existing services/lib/types: `src/services/**`, `src/lib/**`, `src/types/**`
+- [x] Confirm `app/` vs `src/app/` convention and lock in one path
+- [x] Produce deletion list + replacement map
 
 ---
 
-## Phase 1 — Design System Build-Out
+## Phase 1 — Rewrite Control Documents
+> Create the 5 canonical control files that all future agents read before working.
 
-### 1.1 Expanded Token System
-- [ ] Full dark theme tokens (bg layers, glass, text, borders, shadows, accent, semantics)
-- [ ] Light theme on `[data-theme="light"]` selector
-- [ ] Shadow tokens (card, float, glow, accent-glow)
-- [ ] Background gradient CSS variables
-- [ ] Glass blur level tokens
-
-### 1.2 Typography and Animation
-- [ ] `src/styles/typography.css` — type scale utility classes
-- [ ] `src/styles/animations.css` — shimmer, caret-blink, fade-in, slide-up, glow-pulse
-- [ ] `prefers-reduced-motion` guard
-
-### 1.3 Glass Surface Primitive
-- [ ] `src/components/ui/Glass.tsx` — blur + tint + sheen + rim + border stack
-
-### 1.4 App Shell and Navigation
-- [ ] `src/components/ui/AppShell.tsx` — theme-aware root wrapper
-- [ ] `src/components/layout/DesktopNav.tsx` — 232px sidebar
-- [ ] `src/components/layout/MobileNav.tsx` — floating glass tab bar
+- [x] `agents.md` — master agent instructions (platform registry, non-negotiables, file structure)
+- [x] `PLAN_FRONTEND.md` — full frontend spec (layouts, interactions, data loading, animations)
+- [x] `PLAN_BACKEND.md` — full backend spec (API routes, scrapers, DB schema, cron)
+- [x] `TECH_STACK.md` — approved dependencies table + env variable list
+- [x] `DESIGN_TOKENS.md` — full `tokens.css` content + GlassCard spec + typography scale
 
 ---
 
-## Phase 2 — Core UI Primitive Components
+## Phase 2 — Foundation Reset
+> Install new deps, establish token/type/util layer, delete old style and data files.
 
-### 2.1 SearchBar
-- [ ] `src/components/ui/SearchBar.tsx`
-- [ ] Focus ring, animated caret, mic + filter buttons
-
-### 2.2 Platform Components
-- [ ] `src/components/ui/PlatformLogo.tsx`
-- [ ] `src/components/ui/PlatformPill.tsx`
-
-### 2.3 Price and Badge Components
-- [ ] `src/components/ui/PriceBadge.tsx`
-- [ ] `src/components/ui/SaveBadge.tsx`
-- [ ] `src/components/ui/ETABadge.tsx`
-- [ ] `src/components/ui/TrendChip.tsx`
-
-### 2.4 Result Card
-- [ ] `src/components/ui/ResultCard.tsx`
-- [ ] `best` variant, `compact` variant
-
-### 2.5 Verdict and Analytics Components
-- [ ] `src/components/ui/VerdictChip.tsx`
-- [ ] `src/components/ui/SparkChart.tsx`
-- [ ] `src/components/ui/LineChart.tsx`
-
-### 2.6 Loading States
-- [ ] `src/components/ui/SkeletonCard.tsx`
-- [ ] `SkeletonText`, `SkeletonChart`
-
-### 2.7 Bottom Sheet and Compare Grid
-- [ ] `src/components/ui/BottomSheet.tsx`
-- [ ] `src/components/ui/CompareGrid.tsx`
-
-### 2.8 Filter Chip
-- [ ] `src/components/ui/FilterChip.tsx`
+- [ ] `pnpm add framer-motion zustand swr date-fns zod @supabase/supabase-js @supabase/ssr @upstash/redis lucide-react next-themes`
+- [x] Confirm no incompatible CSS-in-JS libraries present (styled-components, emotion, MUI, antd)
+- [x] Write `src/styles/tokens.css` — full token set including `--glass-thin`, `--glass`, `--glass-strong`, `--void-dark`, `--void-light`, all radius, shadow, gradient, and semantic color vars
+- [x] Write `app/globals.css` — imports `tokens.css`, sets `html/body` to `var(--bg-page)`
+- [x] Write root `app/layout.tsx` — `next/font` (Inter Tight + Inter + JetBrains Mono), `ThemeProvider`, globals import
+- [x] Write `src/types/index.ts` — `PriceResult`, `Verdict`, `PriceHistoryPoint`, `WatchlistItem`, `City`, `PlatformId`
+- [x] Write `src/lib/utils/platforms.ts` — `PLATFORMS` registry (15 platforms, all categories)
+- [x] Write `src/lib/utils/format.ts` — `formatPrice`, `formatRelativeTime`, `normalizeQuery`
 
 ---
 
-## Phase 3 — Data Layer
+## Phase 3 — Shared UI Primitives
+> Build every reusable component before any page work starts.
 
-### 3.1 Types
-- [ ] `src/types/product.ts`
-- [ ] `src/types/platform.ts`
-- [ ] `src/types/price.ts`
-- [ ] `src/types/cab.ts`
-- [ ] `src/types/alert.ts`
-- [ ] `src/types/search.ts`
-- [ ] `src/types/ui.ts`
-
-### 3.2 Mock Data
-- [ ] `src/lib/data/platforms.ts`
-- [ ] `src/lib/data/mock-products.ts`
-- [ ] `src/lib/data/mock-prices.ts`
-- [ ] `src/lib/data/mock-history.ts`
-- [ ] `src/lib/data/mock-cabs.ts`
-
-### 3.3 Format Utilities
-- [ ] `src/lib/format.ts` — formatINR, formatSaving, formatETA, formatSurge, formatRelativeTime
-
-### 3.4 Services
-- [ ] `src/services/search-service.ts`
-- [ ] `src/services/price-service.ts`
-- [ ] `src/services/cab-service.ts`
-- [ ] `src/services/alert-service.ts`
-
-### 3.5 API Route Handlers
-- [ ] `app/api/search/route.ts`
-- [ ] `app/api/prices/[id]/route.ts`
-- [ ] `app/api/cabs/route.ts`
-- [ ] `app/api/alerts/route.ts`
+- [x] `src/components/ui/GlassCard.tsx` — 3-level variant (thin/default/strong), pseudo-element pattern
+- [x] `src/components/ui/SearchBar.tsx` — lg/md/sm sizes, glass-strong surface, accent filter button
+- [x] `src/components/ui/badges.tsx` — `SaveBadge`, `ETABadge`, `OfferBadge`
+- [x] `src/components/ui/VerdictChip.tsx` — buy (save-soft) and wait (warn-soft) variants
+- [x] `src/components/features/PlatformLogo.tsx` — colored rounded square + abbreviation text
+- [x] `src/components/features/SparkChart.tsx` — Canvas 2D, gradient fill + accent stroke + endpoint dot
+- [x] `src/components/ui/ResultCard.tsx` — glass surface, BEST accent variant, price/save/ETA layout
 
 ---
 
-## Phase 4 — Search Experience
+## Phase 4 — App Shell and Navigation
+> Build the permanent page chrome for desktop and mobile.
 
-### 4.1 Search Home Page
-- [ ] `src/features/home/SearchHero.tsx` — full-viewport hero
-- [ ] `src/features/home/RecentSearches.tsx`
-- [ ] `src/features/home/TrendingSearches.tsx`
-- [ ] Category chips row
-- [ ] Platform logo strip
-- [ ] `app/page.tsx` updated to new home
-
-### 4.2 Search Suggestions
-- [ ] `src/features/home/SearchSuggestions.tsx` — dropdown, keyboard nav
-
-### 4.3 Search Results Page
-- [ ] `app/search/page.tsx`
-- [ ] `src/features/search/SearchResultsPage.tsx`
-- [ ] `src/features/search/SearchResultsList.tsx`
-- [ ] `src/features/search/FilterPanel.tsx`
-- [ ] `src/features/search/PlatformFilterRow.tsx`
-- [ ] `src/features/search/SearchPageHeader.tsx`
-- [ ] Loading skeleton state
-- [ ] Empty state
+- [x] `src/components/layout/DesktopNav.tsx` — logo row, quick search cmd bar, 5 nav items, user card at bottom (220px, `≥1024px`)
+- [x] `src/components/layout/TabBar.tsx` — glass-strong pill, 4 tabs, active inner highlight, fixed bottom mobile
+- [x] `app/(dashboard)/layout.tsx` — DesktopNav left + main flex-1 + TabBar, correct padding rules
+- [x] Smoke check: shell renders correctly with no page content on both mobile and desktop widths
 
 ---
 
-## Phase 5 — Product Detail Page
+## Phase 5 — Pages (Mock-API-Backed)
+> Each page wired to its `/api/*` contract from day one, even if API returns mock data.
 
-- [ ] `app/item/[id]/page.tsx`
-- [ ] `src/features/product/ProductDetailPage.tsx`
-- [ ] `src/features/product/ProductHero.tsx`
-- [ ] `src/features/product/PriceHistorySection.tsx` — with LineChart
-- [ ] `src/features/product/ProductCompareGrid.tsx`
-- [ ] `src/features/product/BuyWaitCard.tsx`
-- [ ] `src/features/product/SetAlertButton.tsx`
-- [ ] `src/features/alerts/CreateAlertSheet.tsx`
+### Home (`app/(dashboard)/page.tsx`)
+- [x] Server-side city detection from `x-vercel-ip-city` header
+- [x] Greeting (morning/afternoon/evening) + city + live "updated Xs ago" counter
+- [x] SearchBar lg + category pills
+- [x] Desktop: 60/40 trending + watchlist preview grid
+- [x] Mobile: hero headline with gradient `everything.`, trending list
+- [x] Wired to `GET /api/search/trending?city=`
+- [x] Wired to `GET /api/watchlist` (empty state handled)
 
----
+### Search Results (`app/(dashboard)/search/[query]/page.tsx`)
+- [x] Sticky pre-filled SearchBar + category pills + sort pills
+- [x] Product header card (thumbnail, name, platform count, VerdictChip)
+- [x] Result cards sorted by active criterion
+- [ ] Framer Motion `layout` reorder
+- [x] Desktop sidebar: SparkChart + set alert card + quick compare
+- [x] Mobile sticky CTA: best price + platform + savings
+- [x] Wired to `GET /api/prices/grocery?q=&city=` via SWR
 
-## Phase 6 — Cab Fare Comparison
+### Product Detail (`app/(dashboard)/product/[id]/page.tsx`)
+- [x] Breadcrumb + hero glass card with thumbnail
+- [x] Price summary: "Lowest right now" mono, SaveBadge, platform + delivery info, VerdictChip
+- [x] Full-width SparkChart (90 days) with hover crosshair + glass tooltip
+- [x] Platform comparison ResultCard list
+- [x] Watch card: "Alert me at ₹X — likely in ~14 days"
+- [x] Wired to `GET /api/history/[productId]?city=&days=90`
 
-- [ ] `app/cabs/page.tsx`
-- [ ] `src/features/cabs/CabsPage.tsx`
-- [ ] `src/features/cabs/RouteInput.tsx`
-- [ ] `src/features/cabs/CabResultsList.tsx`
-- [ ] `src/features/cabs/SurgeAdvisor.tsx`
-- [ ] `src/features/cabs/MockMap.tsx`
+### Cabs (`app/(dashboard)/cabs/page.tsx`)
+- [x] Route card: FROM/TO inputs, When/Seats selectors
+- [x] Map area placeholder (240px mobile / 320px desktop)
+- [x] Tier pills + fare ResultCards
+- [x] Mobile sticky CTA: cheapest platform + fare + savings
+- [x] Wired to `GET /api/prices/cabs?from_lat=&from_lng=&to_lat=&to_lng=&city=`
 
----
-
-## Phase 7 — Watchlist and Alerts
-
-- [ ] `app/watchlist/page.tsx`
-- [ ] `src/features/watchlist/WatchlistPage.tsx`
-- [ ] `src/features/watchlist/WatchlistCard.tsx`
-- [ ] `app/alerts/page.tsx`
-- [ ] `src/features/alerts/AlertsPage.tsx`
-- [ ] `src/features/alerts/AlertCard.tsx`
-- [ ] `src/hooks/use-watchlist.ts`
-- [ ] `src/hooks/use-alerts.ts`
-
----
-
-## Phase 8 — Account Pages
-
-- [ ] `app/profile/page.tsx`
-- [ ] `src/features/account/ProfilePage.tsx`
-- [ ] `app/settings/page.tsx`
-- [ ] `src/features/account/SettingsPage.tsx`
-- [ ] Theme toggle (dark / light switch)
+### Watchlist (`app/(dashboard)/watchlist/page.tsx`)
+- [x] Grouped by category (Grocery / Electronics / Cabs)
+- [x] Price delta indicators (save color / danger color)
+- [x] Alert badge + remove button per item
+- [x] Empty state: illustration + "Nothing here yet" + Search button
+- [x] Wired to `GET /api/watchlist`
 
 ---
 
-## Phase 9 — Mobile Refinements
+## Phase 6 — API Route Contract Layer
+> All routes Zod-validated, mock-backed, typed — no business logic inside route files.
 
-- [ ] Bottom sheet for filters on mobile
-- [ ] Sticky floating CTA on results and product pages
-- [ ] Swipe-to-dismiss on bottom sheets
-- [ ] Touch target size audit (min 44×44)
-- [ ] Safe area insets applied globally
-- [ ] Responsive grid switches verified
-
----
-
-## Phase 10 — Polish and Performance
-
-### 10.1 States
-- [ ] Shimmer skeletons on all data views
-- [ ] Error states with retry
-- [ ] Empty states with CTAs
-
-### 10.2 Animation
-- [ ] Page transitions
-- [ ] Result card staggered entrance
-- [ ] Search bar focus animation
-- [ ] Bottom sheet spring animation
-- [ ] Reduced-motion fallbacks verified
-
-### 10.3 Performance
-- [ ] Static prerender for home
-- [ ] Recharts dynamic import
-- [ ] Image optimization
-- [ ] Font preloading
-
-### 10.4 PWA and Metadata
-- [ ] `app/manifest.ts`
-- [ ] Favicon + apple-touch-icon
-- [ ] OG metadata per page
+- [x] `app/api/search/trending/route.ts` — `GET ?city=`, returns `TrendingItem[]` mock
+- [x] `app/api/prices/grocery/route.ts` — `GET ?q=&city=`, returns `PriceResult[]` mock (5 platforms)
+- [x] `app/api/prices/electronics/route.ts` — `GET ?q=`, returns `PriceResult[]` mock (5 platforms)
+- [x] `app/api/prices/cabs/route.ts` — `GET ?from_lat=&from_lng=&to_lat=&to_lng=&city=`, returns `PriceResult[]` mock
+- [x] `app/api/history/[productId]/route.ts` — `GET ?city=&days=90`, returns `PriceHistoryPoint[]` (90 mock points)
+- [x] `app/api/watchlist/route.ts` — `GET` + `POST` (add/remove), Supabase-backed with auth guard
+- [x] `app/api/alerts/route.ts` — `POST { productId, targetPrice, platform?, city }`, Supabase-backed
+- [x] `app/api/cron/check-alerts/route.ts` — `GET`, verifies `CRON_SECRET`, triggers alert checks
 
 ---
 
-## Summary Stats
+## Phase 7 — Data Infrastructure
+> Production adapters behind the API routes.
 
-| Phase | Total Items | Completed | Remaining |
-|---|---|---|---|
-| 0 — Foundation | 10 | 10 | 0 |
-| 1 — Design System | 11 | 0 | 11 |
-| 2 — UI Primitives | 18 | 0 | 18 |
-| 3 — Data Layer | 18 | 0 | 18 |
-| 4 — Search Experience | 15 | 0 | 15 |
-| 5 — Product Detail | 8 | 0 | 8 |
-| 6 — Cab Comparison | 6 | 0 | 6 |
-| 7 — Watchlist & Alerts | 8 | 0 | 8 |
-| 8 — Account | 5 | 0 | 5 |
-| 9 — Mobile Refinements | 6 | 0 | 6 |
-| 10 — Polish | 12 | 0 | 12 |
-| **Total** | **117** | **10** | **107** |
+- [x] `src/lib/cache/redis.ts` — Upstash client, `getCache`, `setCache`, key factory functions
+- [x] `src/lib/db/supabase.ts` — server client (service role) + browser client (anon), session helpers
+- [ ] Supabase schema SQL: `products`, `price_history` (partitioned), `user_profiles`, `watchlist`, `alerts`
+- [ ] RLS policies: `watchlist` and `alerts` scoped to `auth.uid()`
+- [x] `src/lib/geo/index.ts` — `getCityFromRequest(req)` using `x-vercel-ip-city`
+- [ ] `src/lib/scrapers/base.ts` — `BaseScraper` with `withRetry`, `userAgent()`, backoff helpers
+
+---
+
+## Phase 8 — External Provider Integrations
+> Replace mock responses one platform at a time. Keep mock fallback behind env var check.
+
+### Grocery
+- [ ] DMart Ready — Playwright, city in URL path
+- [ ] BigBasket — Playwright, pincode in URL
+- [ ] Blinkit — Playwright, lat/lng in localStorage
+- [ ] Zepto — Playwright + XHR intercept, store_id from lat/lng API
+- [ ] Swiggy Instamart — Playwright, location cookie, residential proxy
+
+### Electronics
+- [ ] Amazon PA API — `paapi5-nodejs-sdk`, affiliate credentials
+- [ ] Flipkart Affiliate API — `affiliate-api.flipkart.net`, header-based auth
+- [ ] Croma — Playwright scraping
+- [ ] Reliance Digital — Playwright scraping
+- [ ] Vijay Sales — Playwright scraping
+
+### Cabs
+- [ ] Namma Yatri — BECKN protocol `POST /mobility/search`, free, no auth
+- [ ] Uber — OAuth client_credentials → `GET /v1.2/estimates/price`
+- [ ] Ola — Playwright intercept (fragile, try/catch)
+- [ ] Rapido — Playwright scrape (rapido.bike web app)
+- [ ] InDrive — Playwright scrape (fare range, not fixed)
+
+---
+
+## Phase 9 — Alerts, Auth, Cron, and Verdict Engine
+> Final production feature layer.
+
+- [ ] Supabase Auth: Google OAuth + phone OTP flows
+- [ ] Auth guards on `/api/watchlist` and `/api/alerts` routes
+- [ ] Watchlist optimistic UI mutations via SWR
+- [ ] `src/lib/ai/verdict.ts` — rule-based verdict engine (near-ATL → buy, >30d avg → wait)
+- [ ] GPT-4o-mini fallback for ambiguous verdict cases (behind `OPENAI_API_KEY` env check)
+- [ ] `vercel.json` cron: `{ "path": "/api/cron/check-alerts", "schedule": "*/5 * * * *" }`
+- [ ] Alert email delivery via Resend on trigger
+- [ ] `CRON_SECRET` header verification on cron route
+
+---
+
+## Notes
+
+- Validation commands (`npm run lint`, `npx tsc --noEmit`, `npm run build`) require explicit user approval before running.
+- Each phase must be fully complete before the next begins.
+- Mock fallbacks must remain active for local development throughout the rewrite.
