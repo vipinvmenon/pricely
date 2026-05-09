@@ -7,6 +7,7 @@
 ---
 
 ## Phase 0 — Audit and Deletion Inventory
+
 > Enumerate all files to delete or overwrite. Produce replacement list before any edits.
 
 - [x] List all source files under `app/`, `src/` excluding `node_modules`, `.next`, `.git`
@@ -20,6 +21,7 @@
 ---
 
 ## Phase 1 — Rewrite Control Documents
+
 > Create the 5 canonical control files that all future agents read before working.
 
 - [x] `agents.md` — master agent instructions (platform registry, non-negotiables, file structure)
@@ -31,6 +33,7 @@
 ---
 
 ## Phase 2 — Foundation Reset
+
 > Install new deps, establish token/type/util layer, delete old style and data files.
 
 - [ ] `pnpm add framer-motion zustand swr date-fns zod @supabase/supabase-js @supabase/ssr @upstash/redis lucide-react next-themes`
@@ -45,6 +48,7 @@
 ---
 
 ## Phase 3 — Shared UI Primitives
+
 > Build every reusable component before any page work starts.
 
 - [x] `src/components/ui/GlassCard.tsx` — 3-level variant (thin/default/strong), pseudo-element pattern
@@ -58,6 +62,7 @@
 ---
 
 ## Phase 4 — App Shell and Navigation
+
 > Build the permanent page chrome for desktop and mobile.
 
 - [x] `src/components/layout/DesktopNav.tsx` — logo row, quick search cmd bar, 5 nav items, user card at bottom (220px, `≥1024px`)
@@ -68,9 +73,11 @@
 ---
 
 ## Phase 5 — Pages (Mock-API-Backed)
+
 > Each page wired to its `/api/*` contract from day one, even if API returns mock data.
 
 ### Home (`app/(dashboard)/page.tsx`)
+
 - [x] Server-side city detection from `x-vercel-ip-city` header
 - [x] Greeting (morning/afternoon/evening) + city + live "updated Xs ago" counter
 - [x] SearchBar lg + category pills
@@ -80,6 +87,7 @@
 - [x] Wired to `GET /api/watchlist` (empty state handled)
 
 ### Search Results (`app/(dashboard)/search/[query]/page.tsx`)
+
 - [x] Sticky pre-filled SearchBar + category pills + sort pills
 - [x] Product header card (thumbnail, name, platform count, VerdictChip)
 - [x] Result cards sorted by active criterion
@@ -89,6 +97,7 @@
 - [x] Wired to `GET /api/prices/grocery?q=&city=` via SWR
 
 ### Product Detail (`app/(dashboard)/product/[id]/page.tsx`)
+
 - [x] Breadcrumb + hero glass card with thumbnail
 - [x] Price summary: "Lowest right now" mono, SaveBadge, platform + delivery info, VerdictChip
 - [x] Full-width SparkChart (90 days) with hover crosshair + glass tooltip
@@ -97,6 +106,7 @@
 - [x] Wired to `GET /api/history/[productId]?city=&days=90`
 
 ### Cabs (`app/(dashboard)/cabs/page.tsx`)
+
 - [x] Route card: FROM/TO inputs, When/Seats selectors
 - [x] Map area placeholder (240px mobile / 320px desktop)
 - [x] Tier pills + fare ResultCards
@@ -104,6 +114,7 @@
 - [x] Wired to `GET /api/prices/cabs?from_lat=&from_lng=&to_lat=&to_lng=&city=`
 
 ### Watchlist (`app/(dashboard)/watchlist/page.tsx`)
+
 - [x] Grouped by category (Grocery / Electronics / Cabs)
 - [x] Price delta indicators (save color / danger color)
 - [x] Alert badge + remove button per item
@@ -113,6 +124,7 @@
 ---
 
 ## Phase 6 — API Route Contract Layer
+
 > All routes Zod-validated, mock-backed, typed — no business logic inside route files.
 
 - [x] `app/api/search/trending/route.ts` — `GET ?city=`, returns `TrendingItem[]` mock
@@ -120,42 +132,54 @@
 - [x] `app/api/prices/electronics/route.ts` — `GET ?q=`, returns `PriceResult[]` mock (5 platforms)
 - [x] `app/api/prices/cabs/route.ts` — `GET ?from_lat=&from_lng=&to_lat=&to_lng=&city=`, returns `PriceResult[]` mock
 - [x] `app/api/history/[productId]/route.ts` — `GET ?city=&days=90`, returns `PriceHistoryPoint[]` (90 mock points)
-- [x] `app/api/watchlist/route.ts` — `GET` + `POST` (add/remove), Supabase-backed with auth guard
-- [x] `app/api/alerts/route.ts` — `POST { productId, targetPrice, platform?, city }`, Supabase-backed
+- [ ] `app/api/watchlist/route.ts` — `GET` + `POST` (add/remove), Supabase-backed with auth guard
+- [ ] `app/api/alerts/route.ts` — `POST { productId, targetPrice, platform?, city }`, Supabase-backed
 - [x] `app/api/cron/check-alerts/route.ts` — `GET`, verifies `CRON_SECRET`, triggers alert checks
 
 ---
 
 ## Phase 7 — Data Infrastructure
+
 > Production adapters behind the API routes.
 
 - [x] `src/lib/cache/redis.ts` — Upstash client, `getCache`, `setCache`, key factory functions
 - [x] `src/lib/db/supabase.ts` — server client (service role) + browser client (anon), session helpers
-- [ ] Supabase schema SQL: `products`, `price_history` (partitioned), `user_profiles`, `watchlist`, `alerts`
-- [ ] RLS policies: `watchlist` and `alerts` scoped to `auth.uid()`
+- [x] Supabase schema SQL: `products`, `price_history`, `user_profiles`, `watchlist`, `alerts` (`supabase/schema.sql`)
+- [x] RLS policies: `watchlist` and `alerts` scoped to `auth.uid()` (in `supabase/schema.sql`)
 - [x] `src/lib/geo/index.ts` — `getCityFromRequest(req)` using `x-vercel-ip-city`
-- [ ] `src/lib/scrapers/base.ts` — `BaseScraper` with `withRetry`, `userAgent()`, backoff helpers
+- [x] `src/lib/scrapers/base.ts` — `BaseScraper` with `withRetry`, `userAgent()`, backoff helpers
 
 ---
 
 ## Phase 8 — External Provider Integrations
+
 > Replace mock responses one platform at a time. Keep mock fallback behind env var check.
 
+### Integration plumbing
+
+- [x] Scraper service client (`src/lib/scraper-service/client.ts`) + grocery route calls it when env is set
+- [x] Scraper service scaffold (`scraper-service/`) exposes `POST /v1/prices` with secret header auth
+- [x] Price routes cache `price:*` keys in Redis (300s) with live→mock fallback
+
 ### Grocery
-- [ ] DMart Ready — Playwright, city in URL path
-- [ ] BigBasket — Playwright, pincode in URL
-- [ ] Blinkit — Playwright, lat/lng in localStorage
-- [ ] Zepto — Playwright + XHR intercept, store_id from lat/lng API
-- [ ] Swiggy Instamart — Playwright, location cookie, residential proxy
+
+- [x] DMart Ready — Playwright (Railway service), best-effort search + first price extraction
+- [x] BigBasket — Playwright (Railway service), best-effort search + first price extraction
+- [x] Blinkit — Playwright (Railway service), geolocation + localStorage bootstrap, best-effort search + first price extraction
+- [x] Zepto — Playwright (Railway service), geolocation bootstrap + XHR JSON sniffing for first price
+- [x] Swiggy Instamart — Playwright (Railway service), geolocation bootstrap, best-effort search + first price extraction
 
 ### Electronics
+
 - [ ] Amazon PA API — `paapi5-nodejs-sdk`, affiliate credentials
 - [ ] Flipkart Affiliate API — `affiliate-api.flipkart.net`, header-based auth
 - [ ] Croma — Playwright scraping
 - [ ] Reliance Digital — Playwright scraping
+
 - [ ] Vijay Sales — Playwright scraping
 
 ### Cabs
+
 - [ ] Namma Yatri — BECKN protocol `POST /mobility/search`, free, no auth
 - [ ] Uber — OAuth client_credentials → `GET /v1.2/estimates/price`
 - [ ] Ola — Playwright intercept (fragile, try/catch)
@@ -165,6 +189,7 @@
 ---
 
 ## Phase 9 — Alerts, Auth, Cron, and Verdict Engine
+
 > Final production feature layer.
 
 - [ ] Supabase Auth: Google OAuth + phone OTP flows
