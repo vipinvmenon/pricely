@@ -99,7 +99,7 @@ export default function ComparePage() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            borderRadius: 'var(--r-lg)',
+            borderRadius: 'var(--r-xl)',
             padding: '0 16px',
             marginBottom: 16,
           }}
@@ -293,7 +293,7 @@ export default function ComparePage() {
                 </div>
               </div>
 
-              <Glass variant="plate" style={{ padding: '8px 0', borderRadius: 'var(--r-lg)' }}>
+              <Glass variant="plate" style={{ padding: '8px 0', borderRadius: 'var(--r-xl)' }}>
                 {/* Table header */}
                 <div
                   style={{

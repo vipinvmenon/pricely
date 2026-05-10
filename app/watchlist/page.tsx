@@ -103,7 +103,7 @@ export default function WatchlistPage() {
             Loading…
           </div>
         ) : (
-          <Glass variant="plate" style={{ padding: '8px 0', borderRadius: 'var(--r-lg)' }}>
+          <Glass variant="plate" style={{ padding: '8px 0', borderRadius: 'var(--r-xl)' }}>
             {/* Table header */}
             <div
               style={{

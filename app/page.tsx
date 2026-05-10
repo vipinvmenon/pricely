@@ -229,7 +229,7 @@ export default function HomePage() {
       </section>
 
       {/* How it works */}
-      <section style={{ padding: '0 24px 100px', maxWidth: 1200, margin: '0 auto' }}>
+      <section style={{ padding: '0 24px 100px', maxWidth: 1200, margin: '0 auto', position: 'relative' }} className="section-glow">
         <div
           style={{
             display: 'grid',
@@ -274,21 +274,22 @@ export default function HomePage() {
       </section>
 
       {/* "What it feels like" editorial section */}
-      <section style={{ padding: '0 24px 100px', maxWidth: 1200, margin: '0 auto' }}>
+      <section style={{ padding: '0 24px 100px', maxWidth: 1200, margin: '0 auto', position: 'relative' }} className="section-glow">
         <h2
           style={{
-            fontSize: 'clamp(1.75rem, 4vw, 3rem)',
-            fontWeight: 500,
+            fontSize: 'clamp(2.25rem, 5vw, 3.75rem)',
+            fontWeight: 700,
             fontStyle: 'italic',
-            lineHeight: 1.15,
-            letterSpacing: '-0.02em',
+            lineHeight: 1.1,
+            letterSpacing: '-0.03em',
             color: 'var(--text)',
             marginBottom: 48,
-            maxWidth: 700,
+            maxWidth: 780,
+            fontFamily: 'var(--font-editorial)',
           }}
         >
-          A quiet assistant that does the haggling —
-          <br />
+          A quiet assistant that does the haggling — so you stop
+          refreshing tabs at midnight, and start{' '}
           <span style={{ color: 'var(--accent)' }}>actually saving.</span>
         </h2>
 
