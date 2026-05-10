@@ -10,7 +10,6 @@ const NAV_LINKS = [
   { label: 'Compare', href: '/compare' },
   { label: 'Watchlist', href: '/watchlist' },
   { label: 'Trips', href: '/cabs' },
-  { label: 'Design', href: '/design' },
 ]
 
 function BarChartIcon() {
