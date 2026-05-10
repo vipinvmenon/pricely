@@ -1,173 +1,73 @@
-import type { WatchlistItemView } from "@/types";
-import {
-  badRequest,
-  json,
-  unauthorized,
-  serverError,
-  serviceUnavailable,
-} from "@/lib/api/http";
-import { watchlistPostSchema } from "@/lib/api/schemas/watchlistPost";
-import {
-  createSupabaseRouteHandlerClient,
-  createSupabaseServiceRoleClient,
-  isSupabasePublicConfigured,
-  isSupabaseServiceConfigured,
-} from "@/lib/db/supabase-server";
-import { ensureProductRow } from "@/lib/products/ensureProduct";
-import { deleteWatchlistRow, insertWatchlistRow, listWatchlistViews } from "@/lib/watchlist/db";
+import { NextResponse } from 'next/server'
 
-export async function GET() {
-  if (!isSupabasePublicConfigured()) {
-    return json<WatchlistItemView[]>(MOCK_WATCHLIST);
-  }
-
-  const supabase = await createSupabaseRouteHandlerClient();
-  if (!supabase) return json<WatchlistItemView[]>(MOCK_WATCHLIST);
-
-  const {
-    data: { user },
-    error: userErr,
-  } = await supabase.auth.getUser();
-
-  if (userErr) return serverError("Auth error");
-  if (!user) return unauthorized();
-
-  try {
-    const items = await listWatchlistViews(supabase);
-    return json<WatchlistItemView[]>(items);
-  } catch (e) {
-    const message = e instanceof Error ? e.message : "Unknown error";
-    return serverError(message);
-  }
-}
-
-export async function POST(req: Request) {
-  const raw = await req.json().catch(() => null);
-  const parsed = watchlistPostSchema.safeParse(raw);
-  if (!parsed.success) return badRequest("Invalid request body");
-
-  if (!isSupabasePublicConfigured()) {
-    void parsed.data;
-    return json({ ok: true });
-  }
-
-  const supabase = await createSupabaseRouteHandlerClient();
-  if (!supabase) return json({ ok: true });
-
-  const {
-    data: { user },
-    error: userErr,
-  } = await supabase.auth.getUser();
-
-  if (userErr) return serverError("Auth error");
-  if (!user) return unauthorized();
-
-  const body = parsed.data;
-
-  if (body.action === "remove") {
-    try {
-      const res = await deleteWatchlistRow(supabase, {
-        productId: body.productId,
-        city: body.city,
-      });
-      if (!res.ok) return serverError(res.message);
-      return json({ ok: true });
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Unknown error";
-      return serverError(message);
-    }
-  }
-
-  if (!isSupabaseServiceConfigured()) {
-    return serviceUnavailable("SUPABASE_SERVICE_ROLE_KEY is required to add watchlist items");
-  }
-
-  const service = createSupabaseServiceRoleClient();
-  if (!service) return serviceUnavailable("Service role client unavailable");
-
-  const ensured = await ensureProductRow(service, {
-    productId: body.productId,
-    title: body.title,
-    category: body.category,
-    subtitle: body.subtitle,
-  });
-
-  if (!ensured.ok) return serverError(ensured.message);
-
-  try {
-    const res = await insertWatchlistRow(supabase, {
-      productId: body.productId,
-      city: body.city,
-    });
-    if (!res.ok) {
-      if (res.code === "duplicate") return json({ ok: true, duplicate: true });
-      return serverError(res.message);
-    }
-    return json({ ok: true });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : "Unknown error";
-    return serverError(message);
-  }
-}
-
-export async function DELETE(req: Request) {
-  const url = new URL(req.url);
-  const productId = (url.searchParams.get("productId") ?? "").trim();
-  const city = (url.searchParams.get("city") ?? "").trim();
-
-  if (!productId || !city) return badRequest("productId and city are required");
-
-  if (!isSupabasePublicConfigured()) {
-    return json({ ok: true });
-  }
-
-  const supabase = await createSupabaseRouteHandlerClient();
-  if (!supabase) return json({ ok: true });
-
-  const {
-    data: { user },
-    error: userErr,
-  } = await supabase.auth.getUser();
-
-  if (userErr) return serverError("Auth error");
-  if (!user) return unauthorized();
-
-  try {
-    const res = await deleteWatchlistRow(supabase, { productId, city });
-    if (!res.ok) return serverError(res.message);
-    return json({ ok: true });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : "Unknown error";
-    return serverError(message);
-  }
-}
-
-const MOCK_WATCHLIST: WatchlistItemView[] = [
+const WATCHLIST = [
   {
-    id: "w1",
-    productId: "mock-amul-taaza-1l",
-    title: "Amul Taaza 1L",
-    category: "grocery",
-    subtitle: "Bengaluru",
-    deltaText: "↓ ₹12 today",
-    hasAlert: true,
+    id: '1',
+    initials: 'SW',
+    name: 'Sony WH-1000XM5',
+    subtitle: 'Amazon · Headphones',
+    target: 22000,
+    now: 23450,
+    mrp: 29990,
+    vsTarget: 7,
+    trend: [27000, 26200, 25100, 24800, 24200, 23800, 23450],
+    status: 'Watching',
   },
   {
-    id: "w2",
-    productId: "mock-iphone-16-128",
-    title: "iPhone 16 128GB",
-    category: "electronics",
-    subtitle: "Bengaluru",
-    deltaText: "↑ ₹499 this week",
-    hasAlert: false,
+    id: '2',
+    initials: 'AI',
+    name: 'Apple iPad Air 11"',
+    subtitle: 'Flipkart · Tablets',
+    target: 55000,
+    now: 58999,
+    mrp: 64900,
+    vsTarget: 7,
+    trend: [64900, 63000, 61500, 60000, 59500, 59000, 58999],
+    status: 'Watching',
   },
   {
-    id: "w3",
-    productId: "mock-airport-koramangala",
-    title: "Airport → Koramangala",
-    category: "cabs",
-    subtitle: "Bengaluru",
-    deltaText: "↓ ₹18 avg",
-    hasAlert: false,
+    id: '3',
+    initials: 'DV',
+    name: 'Dyson V12 Detect Slim',
+    subtitle: 'Amazon · Vacuum',
+    target: 42000,
+    now: 44990,
+    mrp: 52900,
+    vsTarget: 7,
+    trend: [52900, 50000, 48000, 47000, 46000, 45500, 44990],
+    status: 'Holding',
   },
-];
+  {
+    id: '4',
+    initials: 'AN',
+    name: 'Asics Novablast 4',
+    subtitle: 'Flipkart · Running Shoes',
+    target: 8500,
+    now: 8249,
+    mrp: 12999,
+    vsTarget: -3,
+    trend: [12999, 11000, 10000, 9500, 9000, 8500, 8249],
+    status: 'Target hit',
+  },
+  {
+    id: '5',
+    initials: 'BQ',
+    name: 'Bose QC Ultra',
+    subtitle: 'Croma · Headphones',
+    target: 30000,
+    now: 32490,
+    mrp: 37990,
+    vsTarget: 8,
+    trend: [37990, 36000, 35000, 34000, 33500, 33000, 32490],
+    status: 'Watching',
+  },
+]
+
+export function GET() {
+  return NextResponse.json(WATCHLIST, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'no-store',
+    },
+  })
+}

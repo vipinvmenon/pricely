@@ -1,67 +1,21 @@
-import type { Metadata } from "next";
-import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
+import type { Metadata } from 'next'
+import { Geist, Geist_Mono } from 'next/font/google'
+import './globals.css'
 
-import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import "./globals.css";
-
-const fontDisplay = Inter_Tight({
-  variable: "--font-display",
-  subsets: ["latin"],
-  preload: true,
-  display: "swap",
-});
-
-const fontText = Inter({
-  variable: "--font-text",
-  subsets: ["latin"],
-  preload: true,
-  display: "swap",
-});
-
-const fontMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  preload: true,
-  display: "swap",
-});
+const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
+const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://pricely.app"),
-  title: {
-    default: "Pricely",
-    template: "%s · Pricely",
-  },
-  description: "Search-first price comparison across platforms with buy-or-wait signals.",
-  applicationName: "Pricely",
-};
+  title: 'Pricely — Never overpay again',
+  description: 'Real-time price comparison across 12 Indian retailers.',
+}
 
-const THEME_INIT_SCRIPT = `
-(() => {
-  try {
-    const theme = window.localStorage.getItem("pricely.theme");
-    if (theme === "light" || theme === "dark") {
-      document.documentElement.setAttribute("data-theme", theme);
-    }
-  } catch {}
-})();
-`;
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${fontDisplay.variable} ${fontText.variable} ${fontMono.variable} h-full antialiased`}
-    >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      </head>
-      <body className="min-h-full">
-        <ThemeProvider>{children}</ThemeProvider>
+    <html lang="en">
+      <body className={`${geist.variable} ${geistMono.variable}`}>
+        {children}
       </body>
     </html>
-  );
+  )
 }
