@@ -7,20 +7,47 @@ import useSWR from "swr";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { cn } from "@/lib/utils/cn";
 import { fetchJson } from "@/lib/utils/fetchJson";
-
-type WatchlistItemView = {
-  id: string;
-  title: string;
-  category: "grocery" | "electronics" | "cabs";
-  subtitle?: string;
-  deltaText?: string;
-  hasAlert?: boolean;
-};
+import type { WatchlistItemView } from "@/types";
 
 export function WatchlistClient() {
-  const { data, isLoading, error } = useSWR<WatchlistItemView[]>("/api/watchlist", fetchJson, {
+  const { data, isLoading, error, mutate } = useSWR<WatchlistItemView[]>("/api/watchlist", fetchJson, {
     refreshInterval: 300_000,
   });
+
+  async function removeItem(item: WatchlistItemView) {
+    const city = item.subtitle?.trim() ?? "";
+    if (!city) return;
+
+    const nextList = (data ?? []).filter(
+      (i) => !(i.productId === item.productId && (i.subtitle ?? "").trim() === city),
+    );
+
+    try {
+      await mutate(
+        async () => {
+          const res = await fetch("/api/watchlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "remove",
+              productId: item.productId,
+              city,
+            }),
+          });
+          if (!res.ok) throw new Error("Remove failed");
+          return fetchJson<WatchlistItemView[]>("/api/watchlist");
+        },
+        {
+          optimisticData: nextList,
+          rollbackOnError: true,
+          revalidate: false,
+          throwOnError: true,
+        },
+      );
+    } catch {
+      await mutate();
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -29,7 +56,7 @@ export function WatchlistClient() {
           Watchlist
         </div>
         <div className="mt-1 text-[13px] text-[var(--color-text-secondary)]">
-          {isLoading ? "Loading…" : error ? "API not ready yet (Phase 6)." : null}
+          {isLoading ? "Loading…" : error ? "Couldn’t load watchlist." : null}
         </div>
       </GlassCard>
 
@@ -115,6 +142,9 @@ export function WatchlistClient() {
                             ) : null}
                             <button
                               type="button"
+                              onClick={() => {
+                                void removeItem(item);
+                              }}
                               className={cn(
                                 "h-9 rounded-[var(--radius-pill)] border px-3",
                                 "border-[var(--color-line-subtle)] bg-[var(--glass-thin)]",

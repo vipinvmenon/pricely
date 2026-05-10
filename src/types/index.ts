@@ -55,3 +55,14 @@ export type WatchlistItem = {
   cityId: string;
   createdAt: string; // ISO
 };
+
+/** API shape for GET /api/watchlist and home preview rows */
+export type WatchlistItemView = {
+  id: string;
+  productId: string;
+  title: string;
+  category: PlatformCategory;
+  subtitle?: string;
+  deltaText?: string;
+  hasAlert?: boolean;
+};

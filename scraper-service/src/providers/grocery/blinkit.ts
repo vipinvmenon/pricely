@@ -34,7 +34,7 @@ export async function scrapeBlinkit(opts: { q: string; city?: string }): Promise
   });
 
   // Blinkit frequently reads location from localStorage; set several common keys defensively.
-  await ctx.addInitScript(({ lat, lng }) => {
+  await ctx.addInitScript(({ lat, lng }: { lat: number; lng: number }) => {
     const set = (k: string, v: unknown) => {
       try {
         localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v));

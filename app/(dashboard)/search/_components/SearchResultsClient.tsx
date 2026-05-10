@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import useSWR from "swr";
 
 import type { PriceResult, Verdict } from "@/types";
+import { computeVerdict } from "@/lib/ai/verdict";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ResultCard } from "@/components/ui/ResultCard";
@@ -12,10 +13,7 @@ import { SparkChart } from "@/components/features/SparkChart";
 import { formatPrice } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import { fetchJson } from "@/lib/utils/fetchJson";
-
-function mockVerdict(): Verdict {
-  return { action: "wait", confidence: 62, reason: "Mock verdict (Phase 9 will implement engine)" };
-}
+import { useOrderedListLayoutFlip } from "@/lib/useOrderedListLayoutFlip";
 
 function etaMinutesFromText(etaText?: string) {
   if (!etaText) return Number.POSITIVE_INFINITY;
@@ -62,6 +60,46 @@ export function SearchResultsClient({ query }: { query: string }) {
 
   const best = sorted[0] ?? null;
   const chartValues = useMemo(() => sorted.map((r) => r.price), [sorted]);
+  const resultOrderKeys = useMemo(() => sorted.map((r) => r.platformId), [sorted]);
+  const setResultListRef = useOrderedListLayoutFlip(resultOrderKeys);
+
+  const verdictPostBody = useMemo(
+    () =>
+      best ? { currentPrice: best.price, peerPrices: chartValues } : null,
+    [best, chartValues],
+  );
+
+  const verdictSwrKey = useMemo(
+    () => (verdictPostBody ? JSON.stringify(verdictPostBody) : null),
+    [verdictPostBody],
+  );
+
+  const { data: aiVerdict } = useSWR(
+    verdictSwrKey,
+    async (keyJson: string) => {
+      const res = await fetch("/api/ai/verdict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: keyJson,
+      });
+      if (!res.ok) throw new Error("Verdict unavailable");
+      return res.json() as Promise<Verdict>;
+    },
+    { dedupingInterval: 120_000, revalidateOnFocus: false },
+  );
+
+  const rulesVerdict: Verdict = useMemo(() => {
+    if (!best) {
+      return {
+        action: "wait",
+        confidence: 45,
+        reason: isLoading ? "Gathering platform prices…" : "No priced results to compare yet.",
+      };
+    }
+    return computeVerdict({ currentPrice: best.price, peerPrices: chartValues });
+  }, [best, chartValues, isLoading]);
+
+  const verdict: Verdict = aiVerdict ?? rulesVerdict;
 
   return (
     <div className="flex flex-col gap-4">
@@ -157,7 +195,7 @@ export function SearchResultsClient({ query }: { query: string }) {
                   </div>
                 </div>
               </div>
-              <VerdictChip verdict={mockVerdict()} />
+              <VerdictChip verdict={verdict} />
             </div>
           </GlassCard>
 
@@ -171,7 +209,15 @@ export function SearchResultsClient({ query }: { query: string }) {
 
           <div className="flex flex-col gap-3">
             {sorted.map((r, idx) => (
-              <ResultCard key={r.platformId} result={r} isBest={idx === 0} />
+              <div
+                key={r.platformId}
+                ref={(el) => {
+                  setResultListRef(r.platformId, el);
+                }}
+                className="w-full"
+              >
+                <ResultCard result={r} isBest={idx === 0} />
+              </div>
             ))}
 
             {isLoading && sorted.length === 0 ? (

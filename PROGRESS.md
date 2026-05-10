@@ -36,7 +36,7 @@
 
 > Install new deps, establish token/type/util layer, delete old style and data files.
 
-- [ ] `pnpm add framer-motion zustand swr date-fns zod @supabase/supabase-js @supabase/ssr @upstash/redis lucide-react next-themes`
+- [x] Dependencies installed (framer-motion, zustand, date-fns, @upstash/redis, lucide-react, next-themes; plus zod + Supabase)
 - [x] Confirm no incompatible CSS-in-JS libraries present (styled-components, emotion, MUI, antd)
 - [x] Write `src/styles/tokens.css` — full token set including `--glass-thin`, `--glass`, `--glass-strong`, `--void-dark`, `--void-light`, all radius, shadow, gradient, and semantic color vars
 - [x] Write `app/globals.css` — imports `tokens.css`, sets `html/body` to `var(--bg-page)`
@@ -91,7 +91,7 @@
 - [x] Sticky pre-filled SearchBar + category pills + sort pills
 - [x] Product header card (thumbnail, name, platform count, VerdictChip)
 - [x] Result cards sorted by active criterion
-- [ ] Framer Motion `layout` reorder
+- [x] List reorder animation on sort (FLIP layout, `prefers-reduced-motion` safe)
 - [x] Desktop sidebar: SparkChart + set alert card + quick compare
 - [x] Mobile sticky CTA: best price + platform + savings
 - [x] Wired to `GET /api/prices/grocery?q=&city=` via SWR
@@ -132,8 +132,8 @@
 - [x] `app/api/prices/electronics/route.ts` — `GET ?q=`, returns `PriceResult[]` mock (5 platforms)
 - [x] `app/api/prices/cabs/route.ts` — `GET ?from_lat=&from_lng=&to_lat=&to_lng=&city=`, returns `PriceResult[]` mock
 - [x] `app/api/history/[productId]/route.ts` — `GET ?city=&days=90`, returns `PriceHistoryPoint[]` (90 mock points)
-- [ ] `app/api/watchlist/route.ts` — `GET` + `POST` (add/remove), Supabase-backed with auth guard
-- [ ] `app/api/alerts/route.ts` — `POST { productId, targetPrice, platform?, city }`, Supabase-backed
+- [x] `app/api/watchlist/route.ts` — `GET` + `POST` (add/remove) + `DELETE`, Supabase-backed with auth guard + mock fallback
+- [x] `app/api/alerts/route.ts` — `POST { productId, targetPrice, platform?, city, title?, category? }`, Supabase-backed + mock fallback
 - [x] `app/api/cron/check-alerts/route.ts` — `GET`, verifies `CRON_SECRET`, triggers alert checks
 
 ---
@@ -192,14 +192,14 @@
 
 > Final production feature layer.
 
-- [ ] Supabase Auth: Google OAuth + phone OTP flows
-- [ ] Auth guards on `/api/watchlist` and `/api/alerts` routes
-- [ ] Watchlist optimistic UI mutations via SWR
-- [ ] `src/lib/ai/verdict.ts` — rule-based verdict engine (near-ATL → buy, >30d avg → wait)
-- [ ] GPT-4o-mini fallback for ambiguous verdict cases (behind `OPENAI_API_KEY` env check)
-- [ ] `vercel.json` cron: `{ "path": "/api/cron/check-alerts", "schedule": "*/5 * * * *" }`
-- [ ] Alert email delivery via Resend on trigger
-- [ ] `CRON_SECRET` header verification on cron route
+- [x] Supabase Auth: Google OAuth + phone OTP flows (`/login`, `/auth/callback`, middleware session refresh, `NavUserCard`)
+- [x] Auth guards on `/api/watchlist` and `/api/alerts` routes (session via Supabase cookies; unauthenticated → 401 when project env is set)
+- [x] Watchlist optimistic UI mutations via SWR (remove path)
+- [x] `src/lib/ai/verdict.ts` — rule-based verdict engine (near-ATL → buy, >30d avg → wait)
+- [x] GPT-4o-mini fallback for ambiguous verdict cases (behind `OPENAI_API_KEY` env check; `POST /api/ai/verdict`)
+- [x] `vercel.json` cron: `{ "path": "/api/cron/check-alerts", "schedule": "*/5 * * * *" }`
+- [x] Alert email delivery via Resend on trigger (`RESEND_API_KEY`, optional `RESEND_FROM_EMAIL`; cron reads `price_history` vs `target_price`)
+- [x] `CRON_SECRET` header verification on cron route (`x-cron-secret` or `Authorization: Bearer`)
 
 ---
 

@@ -34,7 +34,7 @@ export async function scrapeSwiggyInstamart(opts: { q: string; city?: string }):
   });
 
   // Swiggy reads multiple location hints from storage/cookies; set a minimal hint.
-  await ctx.addInitScript(({ lat, lng }) => {
+  await ctx.addInitScript(({ lat, lng }: { lat: number; lng: number }) => {
     try {
       localStorage.setItem("lat", String(lat));
       localStorage.setItem("lng", String(lng));

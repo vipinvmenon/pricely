@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import type { Response } from "playwright";
 
 import type { PriceResult } from "../../types";
 
@@ -80,7 +81,7 @@ export async function scrapeZepto(opts: { q: string; city?: string }): Promise<P
   let foundPrice: number | null = null;
   let foundUrl: string | null = null;
 
-  page.on("response", async (res) => {
+  page.on("response", async (res: Response) => {
     if (foundPrice != null) return;
     const ct = res.headers()["content-type"] ?? "";
     if (!ct.includes("application/json")) return;

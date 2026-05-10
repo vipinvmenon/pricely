@@ -12,6 +12,14 @@ export function unauthorized(message = "Unauthorized") {
   return json({ error: message }, { status: 401 });
 }
 
+export function serviceUnavailable(message = "Service unavailable") {
+  return json({ error: message }, { status: 503 });
+}
+
+export function serverError(message = "Server error") {
+  return json({ error: message }, { status: 500 });
+}
+
 export function parseNumber(value: string | null): number | null {
   if (value == null) return null;
   const n = Number(value);

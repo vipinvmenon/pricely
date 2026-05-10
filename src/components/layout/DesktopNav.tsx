@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { NavUserCard } from "@/components/layout/NavUserCard";
 import { cn } from "@/lib/utils/cn";
 
 type NavItem = {
@@ -31,16 +32,18 @@ export function DesktopNav() {
             pricely
           </div>
         </div>
-        <button
-          type="button"
+        <Link
+          href="/login"
           className={cn(
-            "h-9 rounded-[var(--radius-md)] border px-2",
+            "grid h-9 place-items-center rounded-[var(--radius-md)] border px-2",
             "border-[var(--color-line-subtle)] bg-[var(--glass-thin)]",
             "font-[var(--font-mono)] text-[10px] font-semibold tracking-wide text-[var(--color-text-muted)]",
+            "hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]",
+            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]",
           )}
         >
           IN
-        </button>
+        </Link>
       </div>
 
       <div
@@ -85,20 +88,8 @@ export function DesktopNav() {
         })}
       </nav>
 
-      <div className="mt-auto rounded-[var(--radius-lg)] border border-[var(--color-glass-border)] bg-[var(--color-glass)] p-3">
-        <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-full bg-[var(--glass-thin)] text-[var(--color-accent)]">
-            <span className="font-[var(--font-mono)] text-[11px] font-semibold">RK</span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-semibold text-[var(--color-text-primary)]">
-              Rohit Kumar
-            </div>
-            <div className="mt-0.5 font-[var(--font-mono)] text-[10px] text-[var(--color-text-muted)]">
-              Free · SLR
-            </div>
-          </div>
-        </div>
+      <div className="mt-auto">
+        <NavUserCard />
       </div>
     </aside>
   );

@@ -8,20 +8,12 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { UpdatedAgo } from "@/components/features/UpdatedAgo";
 import { cn } from "@/lib/utils/cn";
 import { fetchJson } from "@/lib/utils/fetchJson";
+import type { WatchlistItemView } from "@/types";
 
 type TrendingItem = {
   id: string;
   query: string;
   category: "grocery" | "electronics" | "cabs";
-};
-
-type WatchlistPreviewItem = {
-  id: string;
-  title: string;
-  subtitle?: string;
-  category: "grocery" | "electronics" | "cabs";
-  deltaText?: string;
-  hasAlert?: boolean;
 };
 
 export function HomeClient({ cityName }: { cityName: string }) {
@@ -34,7 +26,7 @@ export function HomeClient({ cityName }: { cityName: string }) {
   const watchlistKey = "/api/watchlist";
 
   const trending = useSWR<TrendingItem[]>(trendingKey, fetchJson, { refreshInterval: 300_000 });
-  const watchlist = useSWR<WatchlistPreviewItem[]>(watchlistKey, fetchJson, {
+  const watchlist = useSWR<WatchlistItemView[]>(watchlistKey, fetchJson, {
     refreshInterval: 300_000,
   });
 

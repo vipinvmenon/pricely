@@ -5,6 +5,7 @@ import React, { useMemo } from "react";
 import useSWR from "swr";
 
 import type { PriceHistoryPoint, PriceResult, Verdict } from "@/types";
+import { computeVerdict } from "@/lib/ai/verdict";
 import { SparkChart } from "@/components/features/SparkChart";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ResultCard } from "@/components/ui/ResultCard";
@@ -13,10 +14,6 @@ import { VerdictChip } from "@/components/ui/VerdictChip";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/format";
 import { fetchJson } from "@/lib/utils/fetchJson";
-
-function mockVerdict(): Verdict {
-  return { action: "wait", confidence: 58, reason: "Mock verdict (Phase 9 will implement engine)" };
-}
 
 export function ProductClient({ productId }: { productId: string }) {
   const historyKey = useMemo(
@@ -50,6 +47,52 @@ export function ProductClient({ productId }: { productId: string }) {
 
   const values = useMemo(() => (history ?? []).map((p) => p.price), [history]);
 
+  const verdictPostBody = useMemo(() => {
+    if (!best) return null;
+    return {
+      currentPrice: best.price,
+      history: history ?? [],
+      peerPrices: sortedPrices.map((p) => p.price),
+    };
+  }, [best, history, sortedPrices]);
+
+  const verdictSwrKey = useMemo(
+    () => (verdictPostBody ? JSON.stringify(verdictPostBody) : null),
+    [verdictPostBody],
+  );
+
+  const { data: aiVerdict } = useSWR(
+    verdictSwrKey,
+    async (keyJson: string) => {
+      const res = await fetch("/api/ai/verdict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: keyJson,
+      });
+      if (!res.ok) throw new Error("Verdict unavailable");
+      return res.json() as Promise<Verdict>;
+    },
+    { dedupingInterval: 120_000, revalidateOnFocus: false },
+  );
+
+  const rulesVerdict: Verdict = useMemo(() => {
+    const peers = sortedPrices.map((p) => p.price);
+    if (!best) {
+      return {
+        action: "wait",
+        confidence: 45,
+        reason: isPricesLoading ? "Waiting for live prices…" : "No platform prices yet.",
+      };
+    }
+    return computeVerdict({
+      currentPrice: best.price,
+      history: history ?? [],
+      peerPrices: peers.length > 0 ? peers : undefined,
+    });
+  }, [best, history, sortedPrices, isPricesLoading]);
+
+  const verdict: Verdict = aiVerdict ?? rulesVerdict;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -66,7 +109,7 @@ export function ProductClient({ productId }: { productId: string }) {
           </span>
         </div>
 
-        <VerdictChip verdict={mockVerdict()} />
+        <VerdictChip verdict={verdict} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px] lg:items-start">
