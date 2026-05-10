@@ -22,15 +22,15 @@
   --low-stock: #F5A623;
 
   /* ── Glass surfaces ── */
-  --glass-plate-bg: rgba(255,255,255,0.055);
-  --glass-plate-border: rgba(255,255,255,0.11);
-  --glass-plate-highlight: rgba(255,255,255,0.18);
+  --glass-plate-bg: rgba(255,255,255,0.04);
+  --glass-plate-border: rgba(255,255,255,0.08);
+  --glass-plate-highlight: rgba(255,255,255,0.06);
 
-  --glass-strong-bg: rgba(255,255,255,0.09);
-  --glass-strong-border: rgba(255,255,255,0.16);
+  --glass-strong-bg: rgba(255,255,255,0.08);
+  --glass-strong-border: rgba(255,255,255,0.12);
 
-  --glass-solid-bg: rgba(17,18,20,0.92);
-  --glass-solid-border: rgba(255,255,255,0.12);
+  --glass-solid-bg: rgba(20,22,26,0.85);
+  --glass-solid-border: rgba(255,255,255,0.10);
 
   /* ── Radius scale ── */
   --r-xs: 6px;
@@ -51,10 +51,9 @@
   --sp-12: 48px;
 
   /* ── Typography ── */
-  --font-display: var(--font-outfit), 'Outfit', -apple-system, system-ui, sans-serif;
-  --font-body: var(--font-geist), 'Geist', -apple-system, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), 'Geist Mono', ui-monospace, monospace;
-  --font-editorial: var(--font-outfit), 'Outfit', Georgia, serif;
+  --font-display: 'Geist', -apple-system, system-ui, sans-serif;
+  --font-body: 'Geist', -apple-system, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
 
   /* ── Shadows ── */
   --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3);
