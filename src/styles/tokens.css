@@ -33,13 +33,13 @@
   --glass-solid-border: rgba(255,255,255,0.10);
 
   /* ── Radius scale ── */
-  --r-xs: 6px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 20px;
-  --r-xl: 28px;
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
   --r-xxl: 36px;
-  --r-pill: 999px;
+  --r-pill: 9999px;
 
   /* ── Spacing (4px base) ── */
   --sp-1: 4px;

@@ -99,7 +99,7 @@ export default function ComparePage() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            borderRadius: 'var(--r-lg)',
+            borderRadius: 'var(--r-pill)',
             padding: '0 16px',
             marginBottom: 16,
           }}

@@ -1,30 +1,48 @@
-# Pricely — Implementation Plan
+# Pricely — Product Plan
 
-> Real-time price comparison across Indian commerce platforms.
-> Design philosophy: Apple polish · Linear gradients · Liquid glass · Fintech clarity.
+> Last updated: May 2026. UI rebuild complete. This document covers the confirmed
+> tech stack, current architecture, and every remaining backend phase.
 
 ---
 
 ## Product Overview
 
-Pricely lets users search for any product or service and instantly see prices across platforms — groceries (Zepto, Blinkit, Instamart, Swiggy), ecommerce (Amazon, Flipkart, Myntra), and cabs (Uber, Ola, Rapido) — sorted cheapest first with savings, ETA, and a Buy/Wait signal.
-
-**Not** a coupon site. **Not** a deals marketplace. A premium real-time decision engine.
+Pricely is a real-time price comparison platform built for Indian consumers who
+want to stop overpaying across a fragmented retail market. It aggregates live
+prices from 12 retailers spanning grocery (Blinkit, Zepto, Swiggy Instamart,
+BigBasket, DMart Ready) and electronics (Amazon, Flipkart, Croma, Reliance
+Digital, Vijay Sales, Tata Cliq, Myntra), as well as real-time cab fares from
+BluSmart, Rapido, Uber, and Ola. Every price result is ranked cheapest-first
+with a savings amount and a 90-day buy/wait verdict. Users can set target-price
+alerts and track items in a watchlist. Pricely is not a coupon site or a deals
+marketplace — it is a premium, data-driven decision engine that gives Indian
+shoppers clarity on whether to buy now or wait.
 
 ---
 
-## Stack Decisions
+## Tech Stack
 
-| Layer | Choice | Rationale |
-|---|---|---|
-| Framework | Next.js 16 App Router | Already set up, SSR/RSC for fast TTI |
-| Language | TypeScript (strict) | Foundation already strict |
-| Styling | Tailwind CSS v4 + CSS custom properties | Token system in `src/styles/tokens.css` |
-| Animation | CSS transitions + keyframes | Keep bundle lean; no heavy dep yet |
-| Charts | Recharts | Composable, lightweight, SSR-safe |
-| State | React Context + `useReducer` | No complex global state needed yet |
-| Mock data | Static JSON in `src/lib/data/` | No backend yet; swap for real API later |
-| Fonts | Geist Sans + Geist Mono (self-hosted via next/font) | Already wired in layout |
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 16 App Router |
+| Language | TypeScript (strict, no `any`, no `@ts-ignore`) |
+| Package manager | pnpm |
+| Styling | CSS custom properties (design tokens) + Tailwind v4 utilities |
+| Animation | Framer Motion |
+| Global state | Zustand (theme, city, auth session only) |
+| Client data fetching | SWR with `refreshInterval: 300_000` |
+| Input validation | Zod on every API route |
+| Auth + Database | Supabase (PostgreSQL + Auth + Row Level Security) |
+| Cache | Upstash Redis |
+| Email | Resend |
+| Price data | Playwright scrapers on Railway (separate persistent Node process) |
+| Frontend hosting | Vercel |
+| Scraper hosting | Railway |
+| Cron | Vercel cron (alert checks every 5 min) |
+| AI verdict fallback | GPT-4o-mini via OpenAI API |
+| Charts | SVG/Canvas (SparkLine, PriceChart components) |
+| Icons | Lucide React |
+| Fonts | Geist + Geist Mono (next/font/google) |
 
 ---
 
@@ -32,36 +50,49 @@ Pricely lets users search for any product or service and instantly see prices ac
 
 ```
 app/
-  layout.tsx                        Root layout: theme, fonts, metadata
-  page.tsx                          → src/features/home (search hero)
+  layout.tsx                        Root layout: Geist font, globals import
   globals.css                       Tailwind import + token vars
-  
-  search/
-    page.tsx                        → src/features/search (results + filters)
-  
-  item/[id]/
-    page.tsx                        → src/features/product (detail + price history)
-  
+  page.tsx                          Home — search hero, trending, feature cards
+
+  compare/
+    page.tsx                        Product compare — retailer grid, price history chart
+
   cabs/
-    page.tsx                        → src/features/cabs (fare comparison)
-  
+    page.tsx                        Cab fare compare — FareCard list, fare history chart
+
   watchlist/
-    page.tsx                        → src/features/watchlist
-  
-  alerts/
-    page.tsx                        → src/features/alerts
-  
-  profile/
-    page.tsx                        → src/features/account/profile
-  
-  settings/
-    page.tsx                        → src/features/account/settings
+    page.tsx                        Watchlist — WatchlistRow list, auth-gated
+
+  signin/
+    page.tsx                        Sign in — email/password + Google OAuth
+
+  signup/
+    page.tsx                        Sign up — email/password registration
 
   api/
-    search/route.ts                 POST: query → results[]
-    prices/[id]/route.ts            GET: platform prices for item
-    cabs/route.ts                   POST: from/to → fare results[]
-    alerts/route.ts                 GET/POST/DELETE: user alerts
+    trending/
+      route.ts                      GET /api/trending
+    compare/
+      route.ts                      GET /api/compare?q=&city=
+    watchlist/
+      route.ts                      GET /api/watchlist (auth)
+                                    POST /api/watchlist (auth)
+                                    DELETE /api/watchlist?id= (auth)
+    trips/
+      route.ts                      GET /api/trips?from=&to=&city=
+    alerts/
+      route.ts                      GET /api/alerts (auth)
+                                    POST /api/alerts (auth)
+                                    DELETE /api/alerts?id= (auth)
+    verdict/
+      route.ts                      GET /api/verdict?productId=&city=
+    search/
+      route.ts                      GET /api/search?q=&city=&category=
+    cron/
+      alerts/
+        route.ts                    GET /api/cron/alerts (CRON_SECRET required)
+
+  middleware.ts                     Supabase session refresh on every request
 ```
 
 ---
@@ -72,560 +103,347 @@ app/
 src/
   components/
     ui/
-      AppShell.tsx                  Root layout shell
-      Glass.tsx                     Liquid glass surface primitive
-      SearchBar.tsx                 Pill search input with glass + focus states
-      ResultCard.tsx                One platform's price offer
-      CompareGrid.tsx               Desktop tabular comparison view
-      PlatformPill.tsx              Logo + name pill chip
-      PlatformLogo.tsx              Coloured glyph mark
-      PriceBadge.tsx                ₹ value with mono tabular numerals
-      SaveBadge.tsx                 "Save ₹X · Y%" pill
-      ETABadge.tsx                  Delivery/ETA pill
-      TrendChip.tsx                 ↑/↓ price direction chip
-      VerdictChip.tsx               Buy now / Wait chip with confidence
-      SparkChart.tsx                Inline price sparkline
-      LineChart.tsx                 Full price history chart
-      SkeletonCard.tsx              Shimmer loading placeholder
-      BottomSheet.tsx               Mobile slide-up panel
-      TabBar.tsx                    Mobile bottom navigation bar
-      FilterChip.tsx                Toggle-able filter chip
-      PriceAlertModal.tsx           Create price drop alert modal
-    layout/
-      DesktopNav.tsx                232px fixed side navigation
-      MobileNav.tsx                 Floating bottom tab bar
-  
-  features/
-    home/
-      HomePage.tsx                  Orchestrator
-      SearchHero.tsx                Full-screen search hero (dark bg + search bar)
-      RecentSearches.tsx            Local recent searches list
-      TrendingSearches.tsx          Curated suggestions
-    
-    search/
-      SearchResultsPage.tsx         Orchestrator
-      SearchResultsList.tsx         Sorted result cards list
-      FilterPanel.tsx               Category + platform + delivery filter sidebar
-      PlatformFilterRow.tsx         Scrollable platform chips
-      SearchPageHeader.tsx          Search bar + live indicator
-    
-    product/
-      ProductDetailPage.tsx         Orchestrator
-      ProductHero.tsx               Image + title + price summary
-      PriceHistorySection.tsx       Full chart + range selector
-      OffersList.tsx                Compact offer list
-      BuyWaitCard.tsx               Verdict chip + reasoning
-      ProductCompareGrid.tsx        Desktop comparison table
-      SetAlertButton.tsx            Price drop alert trigger
-    
-    cabs/
-      CabsPage.tsx                  Orchestrator
-      RouteInput.tsx                From / To inputs
-      CabResultsList.tsx            Sorted cab result cards
-      SurgeAdvisor.tsx              Wait N min, save ₹X card
-      MockMap.tsx                   Route map placeholder
-    
-    watchlist/
-      WatchlistPage.tsx             Orchestrator
-      WatchlistGrid.tsx             Grid of tracked items
-      WatchlistCard.tsx             Compact item card with price delta
-    
-    alerts/
-      AlertsPage.tsx                Orchestrator
-      AlertCard.tsx                 Alert target + status
-      CreateAlertSheet.tsx          Bottom sheet for new alert
-    
-    account/
-      ProfilePage.tsx
-      SettingsPage.tsx
-  
-  hooks/
-    use-search.ts                   Search query + results state
-    use-prices.ts                   Platform prices fetch + polling
-    use-watchlist.ts                Watchlist CRUD (localStorage backed)
-    use-alerts.ts                   Alerts CRUD
-  
-  services/
-    http-client.ts                  Base fetch wrapper (typed, throws on error)
-    search-service.ts               Query → SearchResult[]
-    price-service.ts                itemId → PlatformPrice[]
-    cab-service.ts                  route → CabFare[]
-    alert-service.ts                Alert CRUD
-  
+      Button.tsx                    Primary/secondary/ghost variants
+      Chip.tsx                      Filter pill chip
+      FareCard.tsx                  Single cab fare result card
+      Glass.tsx                     Glass surface primitive (thin/default/strong)
+      Nav.tsx                       Top navigation bar
+      PriceBadge.tsx                Save / MRP badge
+      PriceChart.tsx                90-day price history chart (SVG)
+      RetailerRow.tsx               Single retailer comparison row
+      SparkLine.tsx                 Mini trend sparkline (Canvas)
+      StatCard.tsx                  Stat summary card
+      WatchlistRow.tsx              Single watchlist item row
+
   lib/
-    cn.ts                           className merge utility
-    format.ts                       formatPrice, formatETA, formatSaving
-    data/
-      platforms.ts                  Platform metadata (id, name, gradient, category)
-      mock-products.ts              Sample searchable products
-      mock-prices.ts                Platform × item price table
-      mock-cabs.ts                  Cab fare samples
-      mock-history.ts               30d price history data
-  
+    supabase/
+      client.ts                     Browser Supabase client (createBrowserClient)
+      server.ts                     Server Supabase client (createServerClient)
+    redis/
+      client.ts                     Upstash Redis client singleton
+      keys.ts                       Cache key factory functions
+    scraper/
+      client.ts                     HTTP client that calls Railway scraper service
+    utils/
+      cn.ts                         clsx + tailwind-merge helper
+      fetchJson.ts                  Typed fetch wrapper
+      format.ts                     formatINR, formatRelativeTime, normalizeQuery
+      phone.ts                      Phone number utilities
+      platforms.ts                  PLATFORMS registry (16 platforms)
+
+  services/
+    compareService.ts               Orchestrates scraper call + Redis cache + DB write
+    tripsService.ts                 Orchestrates cab fare scraper + Redis cache
+    watchlistService.ts             Supabase CRUD for watchlist table
+    alertsService.ts                Supabase CRUD for alerts table
+    priceHistoryService.ts          Write + query price_history table
+    verdictService.ts               Rule-based verdict + GPT-4o-mini fallback
+    searchService.ts                Query fan-out to retailer scrapers + normalise
+
   types/
-    product.ts
-    platform.ts
-    price.ts
-    cab.ts
-    alert.ts
-    search.ts
-    ui.ts
-  
-  constants/
-    platforms.ts                    PLATFORM_IDS, PLATFORM_CATEGORIES
-    categories.ts                   CATEGORY list + display names
-    routes.ts                       ROUTES map
-  
-  config/
-    site.ts                         APP_NAME, tagline, metadata
-  
+    index.ts                        All shared TypeScript types
+
   styles/
-    tokens.css                      Full dark + light token set
-    animations.css                  Keyframes: shimmer, caret, fade, slide-up
-    typography.css                  Display / text / mono scale utility classes
+    tokens.css                      All CSS custom properties (design tokens)
 ```
 
 ---
 
-## Phase 0 — Design System Foundation (COMPLETE)
-*Status: Done. Foundation cleanup and token scaffold created.*
+## Backend Phases
 
-- [x] Repository cleaned (template noise removed)
-- [x] `src/` architecture created
-- [x] `src/styles/tokens.css` — base token set (dark mode)
-- [x] `tsconfig.json` path alias `@/*` -> `src/*`
-- [x] ESLint + build passing
-- [x] Design system contract documented in `docs/design/design-system-contract.md`
-- [x] Cursor rules created (`.cursor/rules/00-06`)
-- [x] `AGENTS.md` operating manual created
+All UI work is complete. Every phase below is backend-only.
 
 ---
 
-## Phase 1 — Design System Build-Out
+### Phase 1 — Database + Auth
 
-### 1.1 Expanded Token System
-*File: `src/styles/tokens.css`*
+**Objective:** Apply Supabase schema, configure auth providers, wire session
+middleware, update platform registry to match target platform set.
 
-- [ ] Full dark theme token set (bg layers, glass variants, text layers, borders, shadows, accent family, semantic states)
-- [ ] Full light theme token set on `[data-theme="light"]`
-- [ ] Shadow tokens (card, float, glow, accent-glow)
-- [ ] Background gradient tokens (voidDark, voidLight, rampAccent, rampSave)
-- [ ] Glass blur level scale tokens
-
-### 1.2 Typography and Animation Foundations
-*Files: `src/styles/typography.css`, `src/styles/animations.css`*
-
-- [ ] Type scale utility classes (display-xl through caption)
-- [ ] Mono / tabular-nums utility class
-- [ ] Keyframe: `shimmer` (loading state sweep)
-- [ ] Keyframe: `caret-blink` (search cursor)
-- [ ] Keyframe: `fade-in`, `slide-up` (entrance)
-- [ ] Keyframe: `accent-glow-pulse`
-- [ ] `prefers-reduced-motion` guard wrapper
-
-### 1.3 Glass Surface Primitive
-*File: `src/components/ui/Glass.tsx`*
-
-- [ ] `Glass` component: blur + tint + inner radial sheen + specular rim + hairline border
-- [ ] Props: `mode`, `strong`, `radius`, `floating`, `padding`, `className`
-- [ ] All decoration layers via `position:absolute` under content `zIndex` stack
-- [ ] Light mode glass variant
-
-### 1.4 App Shell and Navigation
-*Files: `src/components/ui/AppShell.tsx`, `src/components/layout/DesktopNav.tsx`, `src/components/layout/MobileNav.tsx`*
-
-- [ ] `AppShell`: theme-aware root wrapper, bg gradient, min-height full
-- [ ] `DesktopNav`: 232px fixed sidebar, logo, nav items, user footer, command bar slot
-- [ ] `MobileNav`: floating bottom tab bar (glass capsule), 4 tabs: Search · Watch · Trips · You
-- [ ] `DesktopShell`: two-column grid (nav + content)
-- [ ] `MobileShell`: stack (content + bottom nav) with safe area padding
+**Deliverables:**
+- `supabase/schema.sql` applied to Supabase project
+- Google OAuth provider enabled in Supabase Dashboard
+- `src/lib/supabase/client.ts` — browser client
+- `src/lib/supabase/server.ts` — server client (RSC + route handlers)
+- `middleware.ts` — session refresh on every request, cookie handling
+- `src/types/index.ts` — `PlatformId` updated to include `tata_cliq`, `myntra`, `blusmart`; remove `namma_yatri`, `indrive`
+- `src/lib/utils/platforms.ts` — PLATFORMS registry updated to 16 entries
 
 ---
 
-## Phase 2 — Core UI Primitive Components
+### Phase 2 — Real API Routes
 
-### 2.1 SearchBar
-*File: `src/components/ui/SearchBar.tsx`*
+**Objective:** Replace all four mock route handlers with live implementations
+backed by Supabase and Redis. Mock fallbacks remain active when env vars absent.
 
-- [ ] Pill geometry, glass body, blur + tint + specular rim
-- [ ] Props: `value`, `onChange`, `placeholder`, `size` (sm/md/lg), `focused`
-- [ ] Animated cursor caret when `focused`
-- [ ] Search icon left, mic button + filter button right
-- [ ] Focus ring using `accentSoft` token on focus state
-- [ ] Keyboard accessible (label, role)
-
-### 2.2 Platform Components
-*Files: `src/components/ui/PlatformLogo.tsx`, `src/components/ui/PlatformPill.tsx`*
-
-- [ ] `PlatformLogo`: coloured gradient circle/rounded-square with letter glyph
-- [ ] `PlatformPill`: logo + name + optional tagline, glass bg
-- [ ] Active/inactive state via token colors
-- [ ] Platform data driven from `src/lib/data/platforms.ts`
-
-### 2.3 Price and Badge Components
-*Files: `src/components/ui/PriceBadge.tsx`, `src/components/ui/SaveBadge.tsx`, `src/components/ui/ETABadge.tsx`, `src/components/ui/TrendChip.tsx`*
-
-- [ ] `PriceBadge`: ₹ prefix (dimmed), mono tabular numerals, strike-through variant
-- [ ] `SaveBadge`: ↓ arrow, "Save ₹X · Y%", saveSoft bg, save text color
-- [ ] `ETABadge`: clock icon, ETA text, fast/slow tone variants
-- [ ] `TrendChip`: directional arrow, ₹ amount, up/down color semantics
-
-### 2.4 Result Card
-*File: `src/components/ui/ResultCard.tsx`*
-
-- [ ] Glass body + inner sheen + specular rim + hairline border
-- [ ] `best` variant: accent border + inset glow + "Cheapest" ribbon
-- [ ] `compact` prop for dense list view
-- [ ] Platform logo + name + ETA inline
-- [ ] Price area: MRP struck, current price, SaveBadge
-- [ ] Offer code display (if present)
-
-### 2.5 Verdict and Analytics Components
-*Files: `src/components/ui/VerdictChip.tsx`, `src/components/ui/SparkChart.tsx`, `src/components/ui/LineChart.tsx`*
-
-- [ ] `VerdictChip`: buy/wait verdict, confidence %, colored icon dot
-- [ ] `SparkChart`: inline SVG sparkline, accent fill gradient, end dot
-- [ ] `LineChart`: full recharts line chart, gradient fill, grid lines, month labels, tooltip
-
-### 2.6 Loading and Skeleton States
-*File: `src/components/ui/SkeletonCard.tsx`*
-
-- [ ] `SkeletonCard`: shimmer animation, matches ResultCard layout
-- [ ] `SkeletonText`: shimmer text line
-- [ ] `SkeletonChart`: shimmer chart placeholder
-
-### 2.7 Bottom Sheet and Compare Grid
-*Files: `src/components/ui/BottomSheet.tsx`, `src/components/ui/CompareGrid.tsx`*
-
-- [ ] `BottomSheet`: slide-up modal on mobile, header, dismiss swipe area, backdrop
-- [ ] `CompareGrid`: desktop table, sticky header row, platform + price + save + ETA + action columns
-- [ ] Best row highlighted with accent left border + accentSoft bg
-- [ ] Filter chip row for desktop
-
-### 2.8 Filter Chip
-*File: `src/components/ui/FilterChip.tsx`*
-
-- [ ] Toggle on/off states
-- [ ] Accent active state vs glass default
-- [ ] Count badge slot
+**Deliverables:**
+- `app/api/trending/route.ts` — Supabase query + Redis cache
+- `app/api/compare/route.ts` — scraper call via service + Redis cache
+- `app/api/watchlist/route.ts` — Supabase CRUD, auth-gated
+- `app/api/trips/route.ts` — cab scraper via service + Redis cache
+- `src/lib/redis/client.ts`
+- `src/lib/redis/keys.ts`
+- `src/services/compareService.ts` (stub — returns mock until Phase 3)
+- `src/services/tripsService.ts` (stub — returns mock until Phase 5)
 
 ---
 
-## Phase 3 — Data Layer
+### Phase 3 — Price Data Infrastructure
 
-### 3.1 Types
-*Files: `src/types/*.ts`*
+**Objective:** Build the scraper service client and Redis cache layer that all
+compare and search routes depend on.
 
-- [ ] `Product`: id, name, category, brand, image, slug
-- [ ] `Platform`: id, name, category (grocery/ecom/cab/fashion), gradient, glyph, tagline
-- [ ] `PlatformPrice`: productId, platformId, price, mrp, eta, offers, availability, updatedAt
-- [ ] `CabFare`: platformId, tier, price, eta, surge, savings
-- [ ] `PriceHistoryPoint`: date, price, platformId
-- [ ] `SearchResult`: product + topPrice + platforms[]
-- [ ] `Alert`: id, productId, targetPrice, platformId, isActive, triggeredAt
-- [ ] `WatchlistItem`: productId, addedAt, currentBestPrice, lastCheckPrice
-
-### 3.2 Mock Data
-*Files: `src/lib/data/*.ts`*
-
-- [ ] `platforms.ts`: 10 platforms (zip, bolt, aisle, basket, kart, marq, vogue, drift, hop, loop) with full metadata
-- [ ] `mock-products.ts`: 20 products across 3 categories (grocery, electronics, fashion)
-- [ ] `mock-prices.ts`: platform × product price table
-- [ ] `mock-history.ts`: 30-day price history per product
-- [ ] `mock-cabs.ts`: cab fare samples for sample routes
-
-### 3.3 Formatting Utilities
-*File: `src/lib/format.ts`*
-
-- [ ] `formatINR(n)`: ₹1,24,999 format with Indian number grouping
-- [ ] `formatSaving(orig, curr)`: "Save ₹X (Y%)"
-- [ ] `formatETA(minutes)`: "8 min", "today", "2 days"
-- [ ] `formatSurge(multiplier)`: "1.4×"
-- [ ] `formatRelativeTime(date)`: "12s ago", "3 min ago"
-
-### 3.4 Services
-*Files: `src/services/*.ts`*
-
-- [ ] `search-service.ts`: `searchProducts(query)` → `SearchResult[]` (mock-backed)
-- [ ] `price-service.ts`: `getPlatformPrices(productId)` → `PlatformPrice[]`
-- [ ] `cab-service.ts`: `getCabFares(from, to)` → `CabFare[]`
-- [ ] `alert-service.ts`: CRUD for alerts (localStorage-backed)
-
-### 3.5 API Route Handlers
-*Files: `app/api/**.ts`*
-
-- [ ] `GET /api/search?q=` → SearchResult[]
-- [ ] `GET /api/prices/[id]` → PlatformPrice[]
-- [ ] `POST /api/cabs` body: `{ from, to }` → CabFare[]
-- [ ] `GET/POST/DELETE /api/alerts`
+**Deliverables:**
+- `src/lib/scraper/client.ts` — HTTP client for Railway scraper service
+- `src/services/compareService.ts` — full implementation with cache + fallback
+- `src/services/priceHistoryService.ts` — write new price points to DB
+- Redis key schema documented and implemented in `src/lib/redis/keys.ts`
+- Mock fallback paths gated behind `process.env.SCRAPER_SERVICE_URL`
 
 ---
 
-## Phase 4 — Search Experience
+### Phase 4 — Scrapers: Retailers
 
-### 4.1 Search Home Page
-*Files: `src/features/home/*`*
+**Objective:** Build one scraper module per retail platform, deployed as a
+Railway microservice. Each scraper extracts price, MRP, stock status, delivery
+estimate, and product URL.
 
-- [ ] Full-viewport dark hero, void gradient background (green radial blobs)
-- [ ] Centered large tagline: "Find anything, cheaper." (Display XL)
-- [ ] Large glass SearchBar (size="lg") in center
-- [ ] Category chips below bar (Grocery · Electronics · Fashion · Cabs)
-- [ ] Trending searches chips section
-- [ ] Recent searches (localStorage-backed)
-- [ ] Platform logo strip ("Available on 12+ platforms")
-- [ ] Responsive: mobile hero is tall and thumb-centric, desktop is wider centered
-
-### 4.2 Search Suggestions (Autocomplete)
-*Files: `src/features/home/SearchSuggestions.tsx`*
-
-- [ ] Dropdown below search bar (glass surface)
-- [ ] Fuzzy-matched product suggestions from mock data
-- [ ] Recent searches shown when query is empty
-- [ ] Category-grouped results
-- [ ] Keyboard navigable (arrow keys + Enter)
-- [ ] Escape closes dropdown
-
-### 4.3 Search Results Page
-*Files: `src/features/search/*`*
-
-- [ ] Sticky search bar at top with current query
-- [ ] "Live · 12s ago" freshness indicator with green dot
-- [ ] Platform filter chips (horizontal scroll on mobile, sidebar on desktop)
-- [ ] Sort options: Cheapest · Fastest · Best value
-- [ ] Delivery time filter chips (< 10 min · < 30 min · Today · 2 days+)
-- [ ] Result cards list, sorted cheapest first
-- [ ] Best result highlighted at top
-- [ ] Product summary card (image + title + verdict + sparkline)
-- [ ] Loading skeletons while fetching
-- [ ] Empty state for no results
+**Deliverables (Railway service — `scraper/` directory):**
+- `scraper/scrapers/amazon.ts`
+- `scraper/scrapers/flipkart.ts`
+- `scraper/scrapers/croma.ts`
+- `scraper/scrapers/reliance_digital.ts`
+- `scraper/scrapers/vijay_sales.ts`
+- `scraper/scrapers/tata_cliq.ts`
+- `scraper/scrapers/myntra.ts`
+- `scraper/scrapers/blinkit.ts`
+- `scraper/scrapers/zepto.ts`
+- `scraper/scrapers/swiggy_instamart.ts`
+- `scraper/scrapers/bigbasket.ts`
+- `scraper/scrapers/dmart_ready.ts`
+- `scraper/index.ts` — Express HTTP server, `/scrape` endpoint
+- `scraper/types.ts` — shared scraper types
 
 ---
 
-## Phase 5 — Product Detail Page
+### Phase 5 — Scrapers: Cabs
 
-### 5.1 Product Hero
-*Files: `src/features/product/ProductHero.tsx`*
+**Objective:** Build one scraper per cab platform. Cab scrapers take `from` and
+`to` coordinates and return price + ETA.
 
-- [ ] Product image (large, rounded glass surface)
-- [ ] Thumbnail strip below image
-- [ ] Brand + category mono eyebrow
-- [ ] Product title (Display L)
-- [ ] Cheapest price + platform inline
-- [ ] VerdictChip (buy/wait) + "Set price alert" button
-- [ ] Variant selectors (storage, color) where applicable
-
-### 5.2 Price History Section
-*Files: `src/features/product/PriceHistorySection.tsx`*
-
-- [ ] Glass card container
-- [ ] Range selector tabs: 30d · 90d · 6m · 1y
-- [ ] Full LineChart with recharts
-- [ ] 30d high / 30d low annotations
-- [ ] Prediction text below chart ("Pricely predicts ₹X within 14 days")
-- [ ] VerdictChip + confidence signal
-
-### 5.3 Platform Comparison
-*Files: `src/features/product/ProductCompareGrid.tsx`*
-
-- [ ] Desktop: CompareGrid table (Platform · Price · MRP · Save · ETA · Action)
-- [ ] Mobile: ResultCard stack
-- [ ] Best row: accent left border + accentSoft bg + "Cheapest" ribbon
-- [ ] Buy CTA per row (accent for best, glass for others)
-
-### 5.4 Price Alert Flow
-*Files: `src/features/product/SetAlertButton.tsx`, `src/features/alerts/CreateAlertSheet.tsx`*
-
-- [ ] Trigger button on product page
-- [ ] Bottom sheet (mobile) / modal (desktop)
-- [ ] Target price input (slider + manual input)
-- [ ] Platform-specific or any-platform toggle
-- [ ] Confirm creates alert in localStorage
-- [ ] Toast confirmation
+**Deliverables:**
+- `scraper/scrapers/cabs/blusmart.ts`
+- `scraper/scrapers/cabs/rapido.ts`
+- `scraper/scrapers/cabs/uber.ts`
+- `scraper/scrapers/cabs/ola.ts`
+- `src/services/tripsService.ts` — full implementation with cache
 
 ---
 
-## Phase 6 — Cab Fare Comparison
+### Phase 6 — Price History
 
-### 6.1 Route Input
-*Files: `src/features/cabs/RouteInput.tsx`*
+**Objective:** Every compare API call writes new price points to `price_history`.
+The chart query returns the last 90 days for a product+platform combination.
 
-- [ ] Glass card with From/To inputs and vertical connector line
-- [ ] Swap button
-- [ ] Submit triggers fare fetch
-- [ ] Popular routes shortcuts
-
-### 6.2 Fare Results
-*Files: `src/features/cabs/CabResultsList.tsx`*
-
-- [ ] Sorted cab result rows (CompareGrid on desktop, ResultCard on mobile)
-- [ ] Columns: App · Tier · Fare · Save · ETA · Surge · Action
-- [ ] Surge displayed in warning color if > 1.2×
-- [ ] Best row highlighted
-- [ ] Mock route map (placeholder SVG with dotted path)
-
-### 6.3 Surge Advisor
-*Files: `src/features/cabs/SurgeAdvisor.tsx`*
-
-- [ ] Warning card: "Wait N min, save ₹X"
-- [ ] Surge drop prediction text
-- [ ] Warning token bg + amber border
-
-### 6.4 Trip Stats Row
-- [ ] Distance · ETA · Surge factor in a 3-col glass card
+**Deliverables:**
+- `src/services/priceHistoryService.ts` — `writePricePoints`, `getPriceHistory`
+- `supabase/schema.sql` — `price_history` table (already drafted)
+- Deduplication: skip write if price unchanged within last 1 hour for same
+  `(product_id, platform_id, city)`
 
 ---
 
-## Phase 7 — Watchlist and Alerts
+### Phase 7 — Watchlist
 
-### 7.1 Watchlist
-*Files: `src/features/watchlist/*`*
+**Objective:** Authenticated users can add/remove items from their watchlist.
+Logged-out users see a localStorage preview that prompts sign-in on persist.
 
-- [ ] Grid of WatchlistCards
-- [ ] Each card: product image, title, current best price, price delta (↑↓), platform
-- [ ] Empty state: "You haven't saved anything yet."
-- [ ] Add item → navigate to search
-- [ ] Remove item (swipe on mobile, delete icon on desktop)
-
-### 7.2 Alerts Page
-*Files: `src/features/alerts/*`*
-
-- [ ] List of active alerts
-- [ ] AlertCard: product + target price + current price + status (active/triggered)
-- [ ] Triggered alerts shown in accent green
-- [ ] Create new alert button
+**Deliverables:**
+- `app/api/watchlist/route.ts` — GET / POST / DELETE with Zod + auth guard
+- `src/services/watchlistService.ts` — Supabase CRUD
+- Optimistic UI mutation via SWR `mutate`
+- localStorage fallback for unauthenticated state
 
 ---
 
-## Phase 8 — Account Pages
+### Phase 8 — Alerts + Cron + Email
 
-### 8.1 Profile
-*Files: `src/features/account/ProfilePage.tsx`*
+**Objective:** Users set a target price for a watchlisted item. A Vercel cron
+job runs every 5 minutes, compares current prices to targets, and fires a
+Resend email when the target is met.
 
-- [ ] User avatar (initials fallback)
-- [ ] Savings summary: "You've saved ₹4,210 ↓"
-- [ ] City indicator
-- [ ] Stats row: Searches · Alerts · Watchlist
-
-### 8.2 Settings
-*Files: `src/features/account/SettingsPage.tsx`*
-
-- [ ] Theme toggle (dark / light)
-- [ ] City preference
-- [ ] Notification preferences
-- [ ] Platform preferences (enable/disable platforms)
+**Deliverables:**
+- `app/api/alerts/route.ts` — GET / POST / DELETE with Zod + auth guard
+- `src/services/alertsService.ts` — Supabase CRUD
+- `app/api/cron/alerts/route.ts` — cron handler (`CRON_SECRET` verified)
+- `src/lib/email/resend.ts` — Resend client + alert email template
+- `vercel.json` — cron schedule entry
 
 ---
 
-## Phase 9 — Mobile Refinements
+### Phase 9 — Verdict Engine
 
-- [ ] Bottom sheet for filters (mobile)
-- [ ] Sticky floating CTA on product and results pages
-- [ ] Swipe-to-dismiss on bottom sheets
-- [ ] Touch-friendly target sizes (min 44×44)
-- [ ] Safe area insets handled globally
-- [ ] Responsive grid switches (1-col mobile → 2-col tablet → sidebar+content desktop)
+**Objective:** Every product compare response includes a buy/wait verdict
+computed from 90-day price history. Rule-based logic runs first; GPT-4o-mini
+fires as fallback when data is sparse or confidence is low.
+
+**Deliverables:**
+- `src/services/verdictService.ts` — `computeVerdict(history): Verdict`
+- `app/api/verdict/route.ts` — GET endpoint
+- GPT-4o-mini prompt template embedded in `verdictService.ts`
 
 ---
 
-## Phase 10 — Polish and Performance
+### Phase 10 — Search
 
-### 10.1 Loading and Error States
-- [ ] Shimmer skeletons for all data-driven views
-- [ ] Inline error messages with retry affordance
-- [ ] Empty states with helpful actions
+**Objective:** A text query fans out to all relevant platform scrapers, collects
+results, normalises them to a common schema, and returns them ranked by price.
+No centralised product catalogue — results come entirely from live scraper
+responses.
 
-### 10.2 Animation
-- [ ] Page transitions (fade-in on route change)
-- [ ] Result card entrance (staggered slide-up)
-- [ ] Search bar focus expansion
-- [ ] Bottom sheet slide-up with spring
-- [ ] Reduced-motion fallback on all animations
+**Deliverables:**
+- `app/api/search/route.ts` — GET with Zod, `q`, `city`, `category` params
+- `src/services/searchService.ts` — fan-out, normalise, rank
+- Result deduplication by normalised product title + brand
 
-### 10.3 Performance
-- [ ] Static prerender for home page
-- [ ] Recharts lazy-loaded (dynamic import)
-- [ ] Image optimization via next/image
-- [ ] Font preloading
+---
 
-### 10.4 PWA and Metadata
-- [ ] `app/manifest.ts` for PWA manifest
-- [ ] Favicon and apple-touch-icon
-- [ ] OG metadata for product pages
-- [ ] App-like feel on mobile (standalone mode)
+### Phase 11 — Performance + Observability
+
+**Objective:** Lock in cache TTLs, SWR stale-while-revalidate config, and basic
+request logging. Ensure no page requires a live scraper call to render.
+
+**Deliverables:**
+- Redis TTL table documented and enforced in `src/lib/redis/keys.ts`
+- SWR config in `src/lib/swr/config.ts`
+- Request timing logged in all API route handlers
+- `app/api/compare/route.ts` — ensure stale cache is returned while fresh data
+  is fetched in background
+
+---
+
+### Phase 12 — Launch Readiness
+
+**Objective:** All environment variables documented and set in Vercel and
+Railway. Deploy checklist completed. Smoke tests pass.
+
+**Deliverables:**
+- `LAUNCH_CHECKLIST.md` — env vars, Vercel config, Railway config, smoke tests
+- `vercel.json` — cron + headers config finalised
+- `railway.toml` — scraper service config
+- `README.md` updated with local dev setup instructions
 
 ---
 
 ## Design Token Quick Reference
 
-### Dark Theme (hero)
-- Void: `#07080B` / Canvas: `#0E1015` / Raised: `#171A22` / Overlay: `#21242E`
-- Text: `#F6F6F8` / Dim: `rgba(246,246,248,0.66)` / Faint: `rgba(246,246,248,0.42)`
-- Glass: `rgba(28,30,38,0.32)` / Strong: `rgba(34,36,46,0.55)`
-- Accent: `#1DB954` / AccentSoft: `rgba(29,185,84,0.12)`
-- Save: `#5BE3A0` / Warn: `#FFC062` / Danger: `#FF6680`
+All values from `src/styles/tokens.css` — the single source of truth.
 
-### Light Theme
-- Void: `#F2EEE8` / Canvas: `#F9F6F1` / Raised: `#FFFFFF`
-- Glass: `rgba(255,255,255,0.42)` / Strong: `rgba(255,255,255,0.65)`
+### Backgrounds
 
-### Gradient Ramps
-- `rampAccent`: `linear-gradient(135deg, #1ED760 0%, #1DB954 50%, #0F8A3F 100%)`
-- `voidDark`: radial green blobs over `#191414` base
+| Token | Value |
+|---|---|
+| `--bg0` | `#0A0A0B` |
+| `--bg1` | `#111214` |
+| `--bg2` | `#1A1C1F` |
+| `--bg3` | `#222528` |
+
+### Accent
+
+| Token | Value |
+|---|---|
+| `--accent` | `#1ED760` |
+| `--accent-dim` | `rgba(30, 215, 96, 0.15)` |
+| `--accent-border` | `rgba(30, 215, 96, 0.35)` |
+
+### Text
+
+| Token | Value |
+|---|---|
+| `--text` | `#F4F4F6` |
+| `--text-dim` | `#8A8F98` |
+| `--text-faint` | `#4A4F58` |
+
+### Semantic
+
+| Token | Value |
+|---|---|
+| `--save` | `#1ED760` |
+| `--warn` | `#F5A623` |
+| `--danger` | `#F05252` |
+| `--low-stock` | `#F5A623` |
+
+### Glass Surfaces
+
+| Token | Value |
+|---|---|
+| `--glass-plate-bg` | `rgba(255,255,255,0.04)` |
+| `--glass-plate-border` | `rgba(255,255,255,0.08)` |
+| `--glass-plate-highlight` | `rgba(255,255,255,0.06)` |
+| `--glass-strong-bg` | `rgba(255,255,255,0.08)` |
+| `--glass-strong-border` | `rgba(255,255,255,0.12)` |
+| `--glass-solid-bg` | `rgba(20,22,26,0.85)` |
+| `--glass-solid-border` | `rgba(255,255,255,0.10)` |
 
 ### Radius Scale
-`xs:8px · sm:12px · md:16px · lg:22px · xl:30px · pill:9999px`
 
-### Blur Scale
-`frosted:8px · glass:24px · strong:40px`
+| Token | Value |
+|---|---|
+| `--r-xs` | `6px` |
+| `--r-sm` | `10px` |
+| `--r-md` | `14px` |
+| `--r-lg` | `20px` |
+| `--r-xl` | `28px` |
+| `--r-xxl` | `36px` |
+| `--r-pill` | `999px` |
+
+### Spacing (4 px base)
+
+| Token | Value |
+|---|---|
+| `--sp-1` | `4px` |
+| `--sp-2` | `8px` |
+| `--sp-3` | `12px` |
+| `--sp-4` | `16px` |
+| `--sp-6` | `24px` |
+| `--sp-8` | `32px` |
+| `--sp-12` | `48px` |
+
+### Shadows
+
+| Token | Value |
+|---|---|
+| `--shadow-card` | `0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3)` |
+| `--shadow-float` | `0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4)` |
+| `--shadow-accent` | `0 0 20px rgba(30,215,96,0.25)` |
+
+### Typography
+
+| Token | Value |
+|---|---|
+| `--font-display` | `'Geist', -apple-system, system-ui, sans-serif` |
+| `--font-body` | `'Geist', -apple-system, system-ui, sans-serif` |
+| `--font-mono` | `'Geist Mono', ui-monospace, monospace` |
 
 ---
 
 ## Platform Data Reference
 
-| ID | Name | Category | Tagline |
+| ID | Name | Category | Scraper Approach |
 |---|---|---|---|
-| zip | Zip | grocery | 8-min |
-| bolt | Bolt | grocery | 10-min |
-| aisle | Aisle | grocery | 15-min |
-| basket | Basket | grocery | today |
-| kart | Kart | ecom | 2 days |
-| marq | Marq | ecom | tomorrow |
-| vogue | Vogue.in | fashion | 3 days |
-| drift | Drift | cab | 4 min |
-| hop | Hop | cab | 6 min |
-| loop | Loop | cab | 8 min |
-
----
-
-## Component Dependency Map
-
-```
-AppShell
-  DesktopNav / MobileNav (TabBar)
-  
-SearchHero
-  SearchBar → FilterChip
-  
-SearchResultsPage
-  SearchPageHeader → SearchBar
-  PlatformFilterRow → PlatformPill
-  SearchResultsList → ResultCard (best/default) → PlatformLogo, PriceBadge, SaveBadge, ETABadge
-  ProductSummaryCard → VerdictChip, SparkChart
-  
-ProductDetailPage
-  ProductHero → PriceBadge, SaveBadge, VerdictChip
-  PriceHistorySection → LineChart
-  ProductCompareGrid → CompareGrid → PlatformLogo, PriceBadge, SaveBadge, ETABadge
-  
-CabsPage
-  RouteInput
-  CabResultsList → CompareGrid → PlatformLogo, PriceBadge, SaveBadge, ETABadge
-  SurgeAdvisor
-  
-WatchlistPage → WatchlistCard → PriceBadge, TrendChip
-AlertsPage → AlertCard → PriceBadge
-```
-
----
-
-*See `PROGRESS.md` for current completion status.*
+| `blinkit` | Blinkit | grocery | Playwright — search results page |
+| `zepto` | Zepto | grocery | Playwright — search results page |
+| `swiggy_instamart` | Swiggy Instamart | grocery | Playwright — search results page |
+| `bigbasket` | BigBasket | grocery | Playwright — search results page |
+| `dmart_ready` | DMart Ready | grocery | Playwright — search results page |
+| `amazon` | Amazon | electronics | PA API (Product Advertising API); Playwright fallback |
+| `flipkart` | Flipkart | electronics | Affiliate API (token-based); Playwright fallback |
+| `croma` | Croma | electronics | Playwright — PDP + search results |
+| `reliance_digital` | Reliance Digital | electronics | Playwright — search results page |
+| `vijay_sales` | Vijay Sales | electronics | Playwright — search results page |
+| `tata_cliq` | Tata Cliq | electronics | Playwright — search results page |
+| `myntra` | Myntra | electronics | Playwright — search results page |
+| `blusmart` | BluSmart | cabs | Deep link / unofficial booking API |
+| `rapido` | Rapido | cabs | Playwright — fare estimate flow |
+| `uber` | Uber | cabs | Playwright — ride estimate flow |
+| `ola` | Ola | cabs | Playwright — fare estimate flow |

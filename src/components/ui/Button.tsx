@@ -57,7 +57,7 @@ export function Button({
         fontSize,
         fontWeight: 600,
         fontFamily: 'inherit',
-        borderRadius: 'var(--r-md)',
+        borderRadius: 'var(--r-pill)',
         cursor: 'pointer',
         transition: 'filter 0.15s, transform 0.1s',
         width: fullWidth ? '100%' : undefined,

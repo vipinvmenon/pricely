@@ -244,7 +244,7 @@ export default function SignUpPage() {
 const inputStyle: React.CSSProperties = {
   background: 'var(--bg3)',
   border: '1px solid var(--glass-plate-border)',
-  borderRadius: 'var(--r-md)',
+  borderRadius: 'var(--r-pill)',
   padding: '10px 14px',
   color: 'var(--text)',
   fontSize: '0.9375rem',

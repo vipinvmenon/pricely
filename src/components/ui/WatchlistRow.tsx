@@ -160,7 +160,7 @@ export function WatchlistRow({
             color: 'var(--text-faint)',
             fontSize: '1rem',
             padding: '4px',
-            borderRadius: 'var(--r-xs)',
+            borderRadius: 'var(--r-pill)',
             lineHeight: 1,
           }}
           aria-label="More options"

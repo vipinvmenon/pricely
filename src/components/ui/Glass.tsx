@@ -46,6 +46,7 @@ export function Glass({ variant = 'plate', className, children, style, onClick }
       }}
       onClick={onClick}
     >
+      {children}
       <div
         aria-hidden
         style={{
@@ -56,12 +57,8 @@ export function Glass({ variant = 'plate', className, children, style, onClick }
           height: '1px',
           background: 'linear-gradient(90deg, transparent, var(--glass-plate-highlight), transparent)',
           pointerEvents: 'none',
-          zIndex: 1,
         }}
       />
-      <div style={{ position: 'relative', zIndex: 2 }}>
-        {children}
-      </div>
     </div>
   )
 }
