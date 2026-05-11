@@ -42,10 +42,13 @@ export default function ComparePage() {
   const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
-    fetch('/api/compare')
+    fetch('/api/compare?q=sony+wh-1000xm5')
       .then((r) => r.json())
-      .then((d) => {
-        setData(d as CompareResponse)
+      .then((d: unknown) => {
+        const res = d as Record<string, unknown>
+        if (res && res.product) {
+          setData(res as unknown as CompareResponse)
+        }
         setLoading(false)
       })
       .catch(() => setLoading(false))

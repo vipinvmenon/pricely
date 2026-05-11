@@ -11,11 +11,12 @@ export type PlatformId =
   | 'croma'
   | 'reliance_digital'
   | 'vijay_sales'
-  | 'ola'
-  | 'uber'
+  | 'tata_cliq'
+  | 'myntra'
+  | 'blusmart'
   | 'rapido'
-  | 'namma_yatri'
-  | 'indrive'
+  | 'uber'
+  | 'ola'
 
 export type City = {
   id: string
@@ -92,6 +93,8 @@ export type CompareResponse = {
   product: CompareProduct
   retailers: RetailerRow[]
   history: HistoryPoint[]
+  verdict?: Verdict
+  errors?: ScrapeError[]
 }
 
 export type HistoryPoint = {
@@ -137,6 +140,59 @@ export type FareHistoryPoint = {
 export type TripsResponse = {
   fares: FareResult[]
   fareHistory: FareHistoryPoint[]
+  errors?: ScrapeError[]
+}
+
+/* ── Scraper service types ── */
+
+export type ScrapeError = {
+  platformId: PlatformId
+  message: string
+  retryable: boolean
+}
+
+export type ScrapeRequest = {
+  query: string
+  platforms: PlatformId[]
+  city: string
+  maxResults?: number
+}
+
+export type ScrapeResult = {
+  platformId: PlatformId
+  price: number
+  mrp?: number
+  title: string
+  url: string
+  stock: 'in_stock' | 'low_stock' | 'out_of_stock'
+  delivery?: string
+  returns?: string
+  scrapedAt: string
+}
+
+export type ScrapeResponse = {
+  results: ScrapeResult[]
+  errors: ScrapeError[]
+}
+
+export type CabScrapeRequest = {
+  from: string
+  to: string
+  platforms: PlatformId[]
+}
+
+export type CabScrapeResult = {
+  platformId: PlatformId
+  price: number
+  eta: string
+  surgeMultiplier?: number
+  bookUrl: string
+  scrapedAt: string
+}
+
+export type CabScrapeResponse = {
+  results: CabScrapeResult[]
+  errors: ScrapeError[]
 }
 
 /* ── Trending search types ── */

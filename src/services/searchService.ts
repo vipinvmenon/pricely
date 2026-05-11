@@ -1,0 +1,60 @@
+import { scraperClient } from '@/lib/scraper/client'
+import { redis } from '@/lib/redis/client'
+import { keys, TTL } from '@/lib/redis/keys'
+import { PLATFORMS } from '@/lib/utils/platforms'
+import type { PriceResult, PlatformCategory, PlatformId, ScrapeResult } from '@/types'
+
+const CATEGORY_PLATFORMS: Record<Exclude<PlatformCategory, 'cabs'>, PlatformId[]> = {
+  grocery:     ['blinkit', 'zepto', 'swiggy_instamart', 'bigbasket', 'dmart_ready'],
+  electronics: ['amazon', 'flipkart', 'croma', 'reliance_digital', 'vijay_sales', 'tata_cliq', 'myntra'],
+}
+
+const MOCK_SEARCH_RESULTS: PriceResult[] = [
+  { platformId: 'amazon',   platformName: 'Amazon',   category: 'electronics', price: 23450, mrp: 29990, updatedAt: new Date().toISOString(), url: '#' },
+  { platformId: 'flipkart', platformName: 'Flipkart', category: 'electronics', price: 24499, mrp: 29990, updatedAt: new Date().toISOString(), url: '#' },
+  { platformId: 'croma',    platformName: 'Croma',    category: 'electronics', price: 25990, mrp: 29990, updatedAt: new Date().toISOString(), url: '#' },
+]
+
+function normaliseAndRank(raw: ScrapeResult[]): PriceResult[] {
+  const seen = new Map<string, PriceResult>()
+  for (const r of raw) {
+    const key = r.title.toLowerCase().replace(/[^a-z0-9]/g, '')
+    const existing = seen.get(key)
+    if (!existing || r.price < existing.price) {
+      seen.set(key, {
+        platformId:   r.platformId,
+        platformName: PLATFORMS[r.platformId]?.name ?? String(r.platformId),
+        category:     PLATFORMS[r.platformId]?.category ?? 'electronics',
+        price:        r.price,
+        mrp:          r.mrp,
+        updatedAt:    r.scrapedAt,
+        url:          r.url,
+      })
+    }
+  }
+  return [...seen.values()].sort((a, b) => a.price - b.price)
+}
+
+export async function search(
+  query: string,
+  city: string,
+  category?: Exclude<PlatformCategory, 'cabs'>,
+): Promise<PriceResult[]> {
+  if (!process.env.SCRAPER_SERVICE_URL) return MOCK_SEARCH_RESULTS
+
+  const cacheKey = keys.search(query, city)
+  const cached = await redis.get<PriceResult[]>(cacheKey).catch(() => null)
+  if (cached) return cached
+
+  const platforms = category
+    ? CATEGORY_PLATFORMS[category]
+    : [...CATEGORY_PLATFORMS.grocery, ...CATEGORY_PLATFORMS.electronics]
+
+  const { results } = await scraperClient.scrape({ query, platforms, city, maxResults: 3 })
+  const ranked = normaliseAndRank(results)
+
+  await redis.setex(cacheKey, TTL.search, ranked).catch(() => null)
+  return ranked
+}
+
+export const searchService = { search }

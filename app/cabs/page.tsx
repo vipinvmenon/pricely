@@ -79,10 +79,13 @@ export default function CabsPage() {
   const [timeOffset, setTimeOffset] = useState<TimeOffset>('Now')
 
   useEffect(() => {
-    fetch('/api/trips')
+    fetch('/api/trips?from=12.9716,77.5946&to=13.1986,77.7066&city=bangalore')
       .then((r) => r.json())
-      .then((d) => {
-        setData(d as TripsResponse)
+      .then((d: unknown) => {
+        const res = d as Record<string, unknown>
+        if (res && Array.isArray(res.fares)) {
+          setData(res as unknown as TripsResponse)
+        }
         setLoading(false)
       })
       .catch(() => setLoading(false))

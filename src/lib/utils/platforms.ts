@@ -28,12 +28,13 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
     category: "electronics",
   },
   vijay_sales: { id: "vijay_sales", name: "Vijay Sales", category: "electronics" },
+  tata_cliq:  { id: "tata_cliq",  name: "Tata Cliq",   category: "electronics" },
+  myntra:     { id: "myntra",     name: "Myntra",        category: "electronics" },
 
   // Cabs
-  ola: { id: "ola", name: "Ola", category: "cabs" },
-  uber: { id: "uber", name: "Uber", category: "cabs" },
-  rapido: { id: "rapido", name: "Rapido", category: "cabs" },
-  namma_yatri: { id: "namma_yatri", name: "Namma Yatri", category: "cabs" },
-  indrive: { id: "indrive", name: "InDrive", category: "cabs" },
+  blusmart: { id: "blusmart", name: "BluSmart", category: "cabs" },
+  rapido:   { id: "rapido",   name: "Rapido",   category: "cabs" },
+  uber:     { id: "uber",     name: "Uber",     category: "cabs" },
+  ola:      { id: "ola",      name: "Ola",      category: "cabs" },
 };
 
