@@ -44,6 +44,10 @@ const CAB_SCRAPERS: Record<string, CabScraper> = {
 const app = express()
 app.use(express.json())
 
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({ ok: true, uptime: process.uptime() })
+})
+
 app.use((req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.replace('Bearer ', '')
   if (token !== process.env.SCRAPER_SERVICE_SECRET) {
@@ -128,10 +132,6 @@ app.post('/scrape/cabs', async (req: Request, res: Response) => {
   )
 
   res.json({ results, errors })
-})
-
-app.get('/health', (_req: Request, res: Response) => {
-  res.json({ ok: true, uptime: process.uptime() })
 })
 
 const PORT = process.env.PORT ?? 3001
