@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import type { HistoryPoint, PlatformId } from '@/types'
 
 interface PricePoint {
@@ -9,10 +9,10 @@ interface PricePoint {
 }
 
 export async function writePricePoints(points: PricePoint[]): Promise<void> {
-  const supabase = await createClient()
+  // Service role required: price_history RLS blocks anon inserts
+  const supabase = createServiceClient()
 
   for (const point of points) {
-    // Deduplication: skip if price unchanged within last hour
     const { data: last } = await supabase
       .from('price_history')
       .select('price, recorded_at')
@@ -24,7 +24,8 @@ export async function writePricePoints(points: PricePoint[]): Promise<void> {
       .single()
 
     const oneHourAgo = new Date(Date.now() - 3_600_000).toISOString()
-    if (last && last.price === point.price && last.recorded_at > oneHourAgo) {
+    if (last && (last as { price: number; recorded_at: string }).price === point.price
+      && (last as { price: number; recorded_at: string }).recorded_at > oneHourAgo) {
       continue
     }
 
@@ -42,7 +43,7 @@ export async function getPriceHistory(
   city: string,
   days: number,
 ): Promise<HistoryPoint[]> {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
 
   const { data } = await supabase

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 interface Alert {
   id:                string
@@ -56,40 +56,38 @@ export async function deleteAlert(id: string, userId: string): Promise<void> {
 }
 
 export async function getActiveAlerts(): Promise<AlertWithUser[]> {
-  const { createClient: createServiceClient } = await import('@supabase/supabase-js')
-  const supabase = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  // auth.users is not in the public schema — join via PostgREST doesn't work.
+  // Use auth admin API to resolve emails after fetching alert rows.
+  const supabase = createServiceClient()
 
   const { data } = await supabase
     .from('alerts')
-    .select(`
-      *,
-      products ( title ),
-      auth_users:user_id ( email )
-    `)
+    .select('*, products(title)')
     .eq('is_active', true)
 
-  return ((data ?? []) as Array<Alert & {
-    products: { title: string } | null
-    auth_users: { email: string } | null
-  }>).map((row) => ({
+  const rows = (data ?? []) as Array<Alert & { products: { title: string } | null }>
+
+  const userIds = [...new Set(rows.map((r) => r.user_id))]
+  const emailMap = new Map<string, string>()
+  await Promise.all(
+    userIds.map(async (uid) => {
+      const { data: userData } = await supabase.auth.admin.getUserById(uid)
+      if (userData.user?.email) emailMap.set(uid, userData.user.email)
+    }),
+  )
+
+  return rows.map((row) => ({
     ...row,
-    userEmail:    row.auth_users?.email ?? '',
+    userEmail:    emailMap.get(row.user_id) ?? '',
     productTitle: row.products?.title ?? row.product_id,
   }))
 }
 
 export async function markAlertTriggered(id: string): Promise<void> {
-  const { createClient: createServiceClient } = await import('@supabase/supabase-js')
-  const supabase = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const supabase = createServiceClient()
   await supabase
     .from('alerts')
-    .update({ last_triggered_at: new Date().toISOString() })
+    .update({ last_triggered_at: new Date().toISOString(), is_active: false })
     .eq('id', id)
 }
 

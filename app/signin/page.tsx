@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Glass } from '@/components/ui/Glass'
 import { Button } from '@/components/ui/Button'
+import { createClient } from '@/lib/supabase/client'
 
 function CheckIcon() {
   return (
@@ -31,9 +33,40 @@ function GoogleIcon() {
 }
 
 export default function SignInPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [keepSignedIn, setKeepSignedIn] = useState(false)
+  const router = useRouter()
+  const [email, setEmail]           = useState('')
+  const [password, setPassword]     = useState('')
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+
+  async function handleEmailSignIn(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    try {
+      const supabase = createClient()
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+      if (authError) { setError(authError.message); return }
+      router.push('/watchlist')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setError(null)
+    setLoading(true)
+    try {
+      const supabase = createClient()
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider:  'google',
+        options:   { redirectTo: `${window.location.origin}/auth/callback?next=/watchlist` },
+      })
+      if (authError) setError(authError.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div
@@ -146,7 +179,23 @@ export default function SignInPage() {
             Sign in to Pricely
           </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {error && (
+            <div
+              style={{
+                background: 'rgba(255,59,48,0.1)',
+                border: '1px solid rgba(255,59,48,0.3)',
+                borderRadius: 'var(--r-md)',
+                padding: '10px 14px',
+                marginBottom: 16,
+                fontSize: '0.875rem',
+                color: 'var(--danger, #ff3b30)',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleEmailSignIn} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-dim)' }}>
                 Email
@@ -156,6 +205,8 @@ export default function SignInPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                required
+                autoComplete="email"
                 style={inputStyle}
               />
             </label>
@@ -165,36 +216,22 @@ export default function SignInPage() {
                 <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-dim)' }}>
                   Password
                 </span>
-                <a
-                  href="#"
-                  style={{ fontSize: '0.8125rem', color: 'var(--accent)', textDecoration: 'none' }}
-                >
-                  Forgot?
-                </a>
               </div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                required
+                autoComplete="current-password"
                 style={inputStyle}
               />
             </label>
 
-            <label
-              style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
-            >
-              <input
-                type="checkbox"
-                checked={keepSignedIn}
-                onChange={(e) => setKeepSignedIn(e.target.checked)}
-                style={{ accentColor: 'var(--accent)', width: 16, height: 16 }}
-              />
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-dim)' }}>Keep me signed in</span>
-            </label>
-
-            <Button variant="primary" size="md" fullWidth>Sign in</Button>
-          </div>
+            <Button variant="primary" size="md" fullWidth disabled={loading}>
+              {loading ? 'Signing in…' : 'Sign in'}
+            </Button>
+          </form>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
             <div style={{ flex: 1, height: 1, background: 'var(--glass-plate-border)' }} />
@@ -202,17 +239,15 @@ export default function SignInPage() {
             <div style={{ flex: 1, height: 1, background: 'var(--glass-plate-border)' }} />
           </div>
 
-          <div style={{ display: 'flex', gap: 10 }}>
-            {[
-              { label: 'Google', icon: <GoogleIcon /> },
-              { label: 'Apple', icon: '🍎' },
-              { label: 'SSO', icon: '🔑' },
-            ].map((p) => (
-              <Button key={p.label} variant="ghost" size="sm" style={{ flex: 1 }}>
-                {typeof p.icon === 'string' ? p.icon : p.icon} {p.label}
-              </Button>
-            ))}
-          </div>
+          <Button
+            variant="ghost"
+            size="md"
+            fullWidth
+            disabled={loading}
+            onClick={handleGoogleSignIn}
+          >
+            <GoogleIcon /> Continue with Google
+          </Button>
 
           <p
             style={{
@@ -242,14 +277,14 @@ export default function SignInPage() {
 }
 
 const inputStyle: React.CSSProperties = {
-  background: 'var(--bg3)',
-  border: '1px solid var(--glass-plate-border)',
-  borderRadius: 'var(--r-pill)',
-  padding: '10px 14px',
-  color: 'var(--text)',
-  fontSize: '0.9375rem',
-  fontFamily: 'inherit',
-  outline: 'none',
-  width: '100%',
-  transition: 'border-color 0.15s',
+  background:    'var(--bg3)',
+  border:        '1px solid var(--glass-plate-border)',
+  borderRadius:  'var(--r-pill)',
+  padding:       '10px 14px',
+  color:         'var(--text)',
+  fontSize:      '0.9375rem',
+  fontFamily:    'inherit',
+  outline:       'none',
+  width:         '100%',
+  transition:    'border-color 0.15s',
 }

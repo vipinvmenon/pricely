@@ -1,6 +1,7 @@
 import { scraperClient } from '@/lib/scraper/client'
 import { redis } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
+import { PLATFORMS } from '@/lib/utils/platforms'
 import type { TripsResponse, PlatformId } from '@/types'
 
 const CAB_PLATFORMS: PlatformId[] = ['blusmart', 'rapido', 'uber', 'ola']
@@ -29,7 +30,7 @@ export async function getFares(from: string, to: string, city: string): Promise<
     .sort((a, b) => a.price - b.price)
     .map((r, i) => ({
       id:              r.platformId,
-      name:            r.platformId,
+      name:            PLATFORMS[r.platformId]?.name ?? String(r.platformId),
       isLowest:        i === 0,
       price:           r.price,
       eta:             r.eta,

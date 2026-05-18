@@ -35,8 +35,8 @@
 - [x] `app/compare/page.tsx` — Compare page → wired to `/api/compare`
 - [x] `app/cabs/page.tsx` — Cabs page → wired to `/api/trips`
 - [x] `app/watchlist/page.tsx` — Watchlist page → wired to `/api/watchlist`
-- [x] `app/signin/page.tsx` — Sign in page
-- [x] `app/signup/page.tsx` — Sign up page
+- [x] `app/signin/page.tsx` — Sign in page (wired: `signInWithPassword` + `signInWithOAuth` Google; error display; loading state)
+- [x] `app/signup/page.tsx` — Sign up page (wired: `signUp` + `signInWithOAuth` Google; email confirmation screen; error display)
 
 ---
 
@@ -48,7 +48,8 @@
 - [ ] **MANUAL** Configure OAuth redirect URLs (localhost + production)
 - [x] `src/lib/supabase/client.ts` — `createBrowserClient` singleton
 - [x] `src/lib/supabase/server.ts` — `createServerClient` for RSC and route handlers
-- [x] `proxy.ts` — session refresh on every request; env var guard (safe in local dev without credentials)
+- [x] `middleware.ts` — session refresh on every request; env var guard (safe in local dev without credentials); redirects `/watchlist` → `/signin` when unauthenticated
+- [x] `app/auth/callback/route.ts` — Supabase OAuth code exchange; redirects to `next` param after session set
 - [x] `src/types/index.ts` — `tata_cliq`, `myntra`, `blusmart` added to `PlatformId`; `namma_yatri`, `indrive` removed
 - [x] `src/lib/utils/platforms.ts` — Tata Cliq, Myntra, BluSmart added; Namma Yatri, InDrive removed
 - [ ] Smoke-test: `supabase.auth.getUser()` returns null for unauthenticated request without error
@@ -71,43 +72,46 @@
 
 ## Phase 3 — Price Data Infrastructure
 
+- [x] `src/lib/supabase/server.ts` — added `createServiceClient()` export (service role, bypasses RLS)
 - [x] `src/lib/scraper/client.ts` — HTTP client for Railway scraper service
-- [x] `src/services/compareService.ts` — full implementation: scraper call → Redis write → DB write → return
-- [x] `src/services/priceHistoryService.ts` — `writePricePoints`, `getPriceHistory` (Supabase); deduplication guard
-- [ ] `scraper/` directory — Railway microservice (Express + Playwright)
-- [ ] `scraper/package.json`
-- [ ] `scraper/types.ts`
-- [ ] `scraper/index.ts` — Express HTTP server + auth middleware
-- [ ] Deploy scraper service to Railway; set `SCRAPER_SERVICE_URL` + `SCRAPER_SERVICE_SECRET` in Vercel env
+- [x] `src/services/compareService.ts` — full implementation: scraper call → Redis write → DB write → return; retailer name now uses PLATFORMS registry
+- [x] `src/services/priceHistoryService.ts` — `writePricePoints`, `getPriceHistory` (Supabase); deduplication guard; switched to service role client (anon key blocked by RLS `price_history_service_write` policy)
+- [x] `scraper/` directory — Railway microservice (Express + Playwright)
+- [x] `scraper/package.json`
+- [x] `scraper/tsconfig.json`
+- [x] `scraper/types.ts`
+- [x] `scraper/lib/retry.ts` — shared retry helper
+- [x] `scraper/index.ts` — Express HTTP server + auth middleware + `/scrape` + `/scrape/cabs` + `/health`
+- [ ] **MANUAL** Deploy scraper service to Railway; set `SCRAPER_SERVICE_URL` + `SCRAPER_SERVICE_SECRET` in Vercel env
 
 ---
 
 ## Phase 4 — Scrapers: Retailers
 
-- [ ] `scraper/scrapers/amazon.ts` — PA API + Playwright fallback
-- [ ] `scraper/scrapers/flipkart.ts` — Affiliate API + Playwright fallback
-- [ ] `scraper/scrapers/croma.ts`
-- [ ] `scraper/scrapers/reliance_digital.ts`
-- [ ] `scraper/scrapers/vijay_sales.ts`
-- [ ] `scraper/scrapers/tata_cliq.ts`
-- [ ] `scraper/scrapers/myntra.ts`
-- [ ] `scraper/scrapers/blinkit.ts`
-- [ ] `scraper/scrapers/zepto.ts`
-- [ ] `scraper/scrapers/swiggy_instamart.ts`
-- [ ] `scraper/scrapers/bigbasket.ts`
-- [ ] `scraper/scrapers/dmart_ready.ts`
-- [ ] Wire all scrapers into `scraper/index.ts` dispatcher
+- [x] `scraper/scrapers/amazon.ts` — PA API v5 + Playwright fallback
+- [x] `scraper/scrapers/flipkart.ts` — Affiliate API + Playwright fallback
+- [x] `scraper/scrapers/croma.ts`
+- [x] `scraper/scrapers/reliance_digital.ts`
+- [x] `scraper/scrapers/vijay_sales.ts`
+- [x] `scraper/scrapers/tata_cliq.ts`
+- [x] `scraper/scrapers/myntra.ts`
+- [x] `scraper/scrapers/blinkit.ts`
+- [x] `scraper/scrapers/zepto.ts`
+- [x] `scraper/scrapers/swiggy_instamart.ts`
+- [x] `scraper/scrapers/bigbasket.ts`
+- [x] `scraper/scrapers/dmart_ready.ts`
+- [x] All scrapers wired into `scraper/index.ts` dispatcher
 
 ---
 
 ## Phase 5 — Scrapers: Cabs
 
 - [x] `src/services/tripsService.ts` — full implementation with scraper call + Redis cache
-- [ ] `scraper/scrapers/cabs/blusmart.ts`
-- [ ] `scraper/scrapers/cabs/rapido.ts`
-- [ ] `scraper/scrapers/cabs/uber.ts`
-- [ ] `scraper/scrapers/cabs/ola.ts`
-- [ ] Wire cab scrapers into `scraper/index.ts` (`POST /scrape/cabs`)
+- [x] `scraper/scrapers/cabs/blusmart.ts`
+- [x] `scraper/scrapers/cabs/rapido.ts`
+- [x] `scraper/scrapers/cabs/uber.ts`
+- [x] `scraper/scrapers/cabs/ola.ts`
+- [x] Cab scrapers wired into `scraper/index.ts` (`POST /scrape/cabs`)
 
 ---
 
@@ -127,15 +131,15 @@
 - [x] Auth guard in `app/api/watchlist/route.ts` — 401 when `getUser()` returns null
 - [x] `POST /api/watchlist` — Zod body, Supabase insert, Redis invalidation
 - [x] `DELETE /api/watchlist` — Zod query, Supabase delete, Redis invalidation
-- [ ] localStorage fallback for unauthenticated users; flush on sign-in
-- [ ] Optimistic SWR mutation in watchlist page for instant UI feedback
+- [x] `app/watchlist/page.tsx` — SWR; 401 triggers sign-in prompt; optimistic DELETE via `mutate`; `usePendingWatchlist` flush on auth
+- [x] `src/lib/hooks/usePendingWatchlist.ts` — `addPendingWatchlistItem`, `getPendingWatchlistItems`, flush hook
 - [ ] Verify watchlist CRUD end-to-end for authenticated user
 
 ---
 
 ## Phase 8 — Alerts + Cron + Email
 
-- [x] `src/services/alertsService.ts` — `getAlerts`, `createAlert`, `deleteAlert`, `getActiveAlerts`, `markAlertTriggered`
+- [x] `src/services/alertsService.ts` — `getAlerts`, `createAlert`, `deleteAlert`, `getActiveAlerts`, `markAlertTriggered`; fixed `getActiveAlerts` to resolve user emails via `auth.admin.getUserById` (PostgREST cannot join `auth.users`); `markAlertTriggered` now also sets `is_active: false`
 - [x] `app/api/alerts/route.ts` — GET/POST/DELETE with Zod + auth guard
 - [x] `src/lib/email/resend.ts` — `sendPriceDropEmail` (dynamic import; skips gracefully when `RESEND_API_KEY` unset)
 - [x] `app/api/cron/alerts/route.ts` — `CRON_SECRET` verification, alert loop, email dispatch
@@ -147,9 +151,9 @@
 
 ## Phase 9 — Verdict Engine
 
-- [x] `src/services/verdictService.ts` — rule-based `computeVerdict(history)`
-- [x] Rule logic: 90-day low, avg, 7-day trend direction
-- [x] GPT-4o-mini fallback stub (fires when `history.length < 7` or confidence `< 0.5`; requires `OPENAI_API_KEY`)
+- [x] `src/services/verdictService.ts` — async `computeVerdict(history)`; rule logic: 90-day low, avg, 7-day trend
+- [x] GPT-4o-mini async fallback (fires when `history.length < 7` or no rule matches; requires `OPENAI_API_KEY`; validates JSON response shape)
+- [x] Dead code path removed — default case now directly returns `gptFallback(history)`
 - [x] `app/api/verdict/route.ts` — GET with Zod: `productId`, `city`
 - [x] Verdict wired into `app/api/compare/route.ts` response
 - [ ] Verify: verdict changes from `buy` to `wait` correctly with test history arrays
@@ -177,13 +181,13 @@
 
 ## Phase 12 — Launch Readiness
 
-- [ ] Create `LAUNCH_CHECKLIST.md`
-- [ ] Set all production env vars in Vercel Dashboard
-- [ ] Set all production env vars in Railway Dashboard
+- [x] `LAUNCH_CHECKLIST.md` — complete pre-launch verification checklist
+- [ ] **MANUAL** Set all production env vars in Vercel Dashboard
+- [ ] **MANUAL** Set all production env vars in Railway Dashboard
 - [x] `vercel.json` — cron schedule + security headers
-- [ ] `railway.toml` — scraper service start command + health check
-- [ ] Update `README.md` — local dev setup, env var guide, pnpm commands
-- [ ] Run smoke tests (see checklist in `BACKEND_EXEC.md` § 12.4)
+- [x] `railway.toml` — scraper service start command + health check
+- [x] `README.md` — local dev setup, env var guide, pnpm commands, platform coverage table
+- [ ] Run smoke tests (see `LAUNCH_CHECKLIST.md`)
 - [ ] `npm run build` — zero type errors, zero lint errors
 
 ---

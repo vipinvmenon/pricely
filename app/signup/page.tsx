@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Glass } from '@/components/ui/Glass'
 import { Button } from '@/components/ui/Button'
+import { createClient } from '@/lib/supabase/client'
 
 function CheckIcon() {
   return (
@@ -31,9 +33,60 @@ function GoogleIcon() {
 }
 
 export default function SignUpPage() {
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const router                          = useRouter()
+  const [fullName, setFullName]         = useState('')
+  const [email, setEmail]               = useState('')
+  const [password, setPassword]         = useState('')
+  const [loading, setLoading]           = useState(false)
+  const [error, setError]               = useState<string | null>(null)
+  const [confirmed, setConfirmed]       = useState(false)
+
+  async function handleEmailSignUp(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    try {
+      const supabase = createClient()
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: fullName } },
+      })
+      if (authError) { setError(authError.message); return }
+      setConfirmed(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setError(null)
+    setLoading(true)
+    try {
+      const supabase = createClient()
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider:  'google',
+        options:   { redirectTo: `${window.location.origin}/auth/callback?next=/watchlist` },
+      })
+      if (authError) setError(authError.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (confirmed) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg0)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Glass variant="plate" style={{ padding: 40, maxWidth: 400, width: '100%', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '1.375rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 16px' }}>Check your email</h2>
+          <p style={{ color: 'var(--text-dim)', lineHeight: 1.65, marginBottom: 24 }}>
+            We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.
+          </p>
+          <Button variant="ghost" size="md" onClick={() => router.push('/signin')}>Back to sign in</Button>
+        </Glass>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -147,7 +200,23 @@ export default function SignUpPage() {
             Create your account
           </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {error && (
+            <div
+              style={{
+                background: 'rgba(255,59,48,0.1)',
+                border: '1px solid rgba(255,59,48,0.3)',
+                borderRadius: 'var(--r-md)',
+                padding: '10px 14px',
+                marginBottom: 16,
+                fontSize: '0.875rem',
+                color: 'var(--danger, #ff3b30)',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleEmailSignUp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-dim)' }}>
                 Full name
@@ -157,6 +226,7 @@ export default function SignUpPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Priya Sharma"
+                autoComplete="name"
                 style={inputStyle}
               />
             </label>
@@ -170,6 +240,8 @@ export default function SignUpPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                required
+                autoComplete="email"
                 style={inputStyle}
               />
             </label>
@@ -183,6 +255,9 @@ export default function SignUpPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Min. 8 characters"
+                required
+                minLength={8}
+                autoComplete="new-password"
                 style={inputStyle}
               />
             </label>
@@ -193,8 +268,10 @@ export default function SignUpPage() {
               <a href="#" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Privacy Policy</a>.
             </p>
 
-            <Button variant="primary" size="md" fullWidth>Create account</Button>
-          </div>
+            <Button variant="primary" size="md" fullWidth disabled={loading}>
+              {loading ? 'Creating account…' : 'Create account'}
+            </Button>
+          </form>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
             <div style={{ flex: 1, height: 1, background: 'var(--glass-plate-border)' }} />
@@ -202,16 +279,17 @@ export default function SignUpPage() {
             <div style={{ flex: 1, height: 1, background: 'var(--glass-plate-border)' }} />
           </div>
 
-          <div style={{ display: 'flex', gap: 10 }}>
-            {[
-              { label: 'Google', icon: <GoogleIcon /> },
-              { label: 'Apple', icon: '🍎' },
-              { label: 'SSO', icon: '🔑' },
-            ].map((p) => (
-              <Button key={p.label} variant="ghost" size="sm" style={{ flex: 1 }}>
-                {typeof p.icon === 'string' ? p.icon : p.icon} {p.label}
-              </Button>
-            ))}
+          <Button
+            variant="ghost"
+            size="md"
+            fullWidth
+            disabled={loading}
+            onClick={handleGoogleSignIn}
+          >
+            <GoogleIcon /> Continue with Google
+          </Button>
+
+          <div style={{ display: 'none' }}>{/* Apple/SSO removed — not configured */}
           </div>
 
           <p

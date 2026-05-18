@@ -1,6 +1,7 @@
 import { scraperClient } from '@/lib/scraper/client'
 import { redis } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
+import { PLATFORMS } from '@/lib/utils/platforms'
 import { priceHistoryService } from './priceHistoryService'
 import type { CompareResponse, PlatformId } from '@/types'
 
@@ -22,7 +23,7 @@ export async function compare(query: string, city: string): Promise<CompareRespo
     .sort((a, b) => a.price - b.price)
     .map((r, i) => ({
       rank:     i + 1,
-      name:     r.title,
+      name:     PLATFORMS[r.platformId]?.name ?? String(r.platformId),
       isLowest: i === 0,
       price:    r.price,
       mrp:      r.mrp,

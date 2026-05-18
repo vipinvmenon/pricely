@@ -67,7 +67,7 @@ export async function GET(request: Request) {
 
     const { q, city } = parsed.data
     const result = await compareService.compare(q, city)
-    result.verdict = verdictService.computeVerdict(result.history)
+    result.verdict = await verdictService.computeVerdict(result.history)
 
     const response = NextResponse.json(result)
     response.headers.set('X-Response-Time', `${Date.now() - start}ms`)

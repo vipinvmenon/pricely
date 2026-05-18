@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 
   const { productId, city } = parsed.data
   const history = await priceHistoryService.getPriceHistory(productId, city, 90)
-  const verdict = verdictService.computeVerdict(history)
+  const verdict = await verdictService.computeVerdict(history)
 
   const response = NextResponse.json({ verdict })
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
