@@ -1,5 +1,5 @@
 import { scraperClient } from '@/lib/scraper/client'
-import { redis } from '@/lib/redis/client'
+import { cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
 import { PLATFORMS } from '@/lib/utils/platforms'
 import { priceHistoryService } from './priceHistoryService'
@@ -12,7 +12,7 @@ const RETAIL_PLATFORMS: PlatformId[] = [
 
 export async function compare(query: string, city: string): Promise<CompareResponse> {
   const cacheKey = keys.compare(query, city)
-  const cached = await redis.get<CompareResponse>(cacheKey).catch(() => null)
+  const cached = await cacheGet<CompareResponse>(cacheKey)
   if (cached) return cached
 
   const { results, errors } = await scraperClient.scrape({
@@ -56,7 +56,7 @@ export async function compare(query: string, city: string): Promise<CompareRespo
     errors,
   }
 
-  await redis.setex(cacheKey, TTL.compare, response).catch(() => null)
+  await cacheSetex(cacheKey, TTL.compare, response)
   return response
 }
 

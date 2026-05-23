@@ -1,30 +1,59 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import Link from "next/link";
 import { Nav } from "@/components/ui/Nav";
 import { Glass } from "@/components/ui/Glass";
 import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
 import { WatchlistRow } from "@/components/ui/WatchlistRow";
-import { fetchJson, FetchJsonError } from "@/lib/utils/fetchJson";
+import { createClient } from "@/lib/supabase/client";
+import { fetchJson } from "@/lib/utils/fetchJson";
 import { usePendingWatchlist } from "@/lib/hooks/usePendingWatchlist";
 import type { WatchlistPageItem } from "@/types";
 
 const WATCHLIST_KEY = "/api/watchlist";
+const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 export default function WatchlistPage() {
 	const { mutate } = useSWRConfig();
+	const [userId, setUserId] = useState<string | null>(null);
+	const [authReady, setAuthReady] = useState(!supabaseConfigured);
+
+	useEffect(() => {
+		if (!supabaseConfigured) return;
+
+		const supabase = createClient();
+
+		void supabase.auth.getSession().then(({ data: { session } }) => {
+			setUserId(session?.user.id ?? null);
+			setAuthReady(true);
+		});
+
+		const {
+			data: { subscription },
+		} = supabase.auth.onAuthStateChange((_event, session) => {
+			setUserId(session?.user.id ?? null);
+			setAuthReady(true);
+		});
+
+		return () => subscription.unsubscribe();
+	}, []);
+
+	// Only call the API when signed in — avoids 401 noise when Supabase is configured
+	const watchlistKey =
+		supabaseConfigured && !userId ? null : WATCHLIST_KEY;
+
 	const { data, isLoading, error } = useSWR<WatchlistPageItem[]>(
-		WATCHLIST_KEY,
+		watchlistKey,
 		(url: string) => fetchJson<WatchlistPageItem[]>(url),
 	);
 
-	const isUnauthenticated =
-		error instanceof FetchJsonError && error.status === 401;
+	const isUnauthenticated = supabaseConfigured && authReady && !userId;
+	const showLoading = !authReady || (Boolean(userId) && isLoading);
 
 	// Flush any pending watchlist items buffered while unauthenticated
-	usePendingWatchlist(!isUnauthenticated && !isLoading && !error);
+	usePendingWatchlist(Boolean(userId) && !isLoading && !error);
 
 	async function handleRemove(id: string) {
 		const optimistic = (data ?? []).filter((item) => item.id !== id);
@@ -143,7 +172,7 @@ export default function WatchlistPage() {
 				</div>
 
 				{/* Content area */}
-				{isLoading ? (
+				{showLoading ? (
 					<div
 						style={{
 							textAlign: "center",
@@ -154,6 +183,24 @@ export default function WatchlistPage() {
 					>
 						Loading…
 					</div>
+				) : error ? (
+					<Glass
+						variant="plate"
+						style={{
+							padding: 48,
+							textAlign: "center",
+							borderRadius: "var(--r-lg)",
+						}}
+					>
+						<p style={{ color: "var(--text-dim)", marginBottom: 24 }}>
+							Could not load your watchlist. Try signing in again.
+						</p>
+						<a href="/signin" style={{ textDecoration: "none" }}>
+							<Button variant="primary" size="md" type="button">
+								Sign in
+							</Button>
+						</a>
+					</Glass>
 				) : isUnauthenticated ? (
 					<Glass
 						variant="plate"
@@ -166,11 +213,11 @@ export default function WatchlistPage() {
 						<p style={{ color: "var(--text-dim)", marginBottom: 24 }}>
 							Sign in to see your watchlist
 						</p>
-						<Link href="/signin">
-							<Button variant="primary" size="md">
+						<a href="/signin" style={{ textDecoration: "none" }}>
+							<Button variant="primary" size="md" type="button">
 								Sign in
 							</Button>
-						</Link>
+						</a>
 					</Glass>
 				) : items.length === 0 ? (
 					<Glass

@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Glass } from '@/components/ui/Glass'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
+import { formatAuthError } from '@/lib/utils/authErrors'
 
 function CheckIcon() {
   return (
@@ -33,11 +34,21 @@ function GoogleIcon() {
 }
 
 export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInForm />
+    </Suspense>
+  )
+}
+
+function SignInForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlError = formatAuthError(searchParams.get('error'))
   const [email, setEmail]           = useState('')
   const [password, setPassword]     = useState('')
   const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState<string | null>(null)
+  const [error, setError]           = useState<string | null>(urlError)
 
   async function handleEmailSignIn(e: React.FormEvent) {
     e.preventDefault()
@@ -46,7 +57,10 @@ export default function SignInPage() {
     try {
       const supabase = createClient()
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-      if (authError) { setError(authError.message); return }
+      if (authError) {
+        setError(formatAuthError(authError.message) ?? authError.message)
+        return
+      }
       router.push('/watchlist')
     } finally {
       setLoading(false)
@@ -62,7 +76,9 @@ export default function SignInPage() {
         provider:  'google',
         options:   { redirectTo: `${window.location.origin}/auth/callback?next=/watchlist` },
       })
-      if (authError) setError(authError.message)
+      if (authError) {
+        setError(formatAuthError(authError.message) ?? authError.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -228,7 +244,7 @@ export default function SignInPage() {
               />
             </label>
 
-            <Button variant="primary" size="md" fullWidth disabled={loading}>
+            <Button type="submit" variant="primary" size="md" fullWidth disabled={loading}>
               {loading ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
@@ -240,6 +256,7 @@ export default function SignInPage() {
           </div>
 
           <Button
+            type="button"
             variant="ghost"
             size="md"
             fullWidth

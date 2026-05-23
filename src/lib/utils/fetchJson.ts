@@ -10,6 +10,7 @@ export class FetchJsonError extends Error {
 
 export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   const res = await fetch(input, {
+    credentials: "same-origin",
     ...init,
     headers: {
       Accept: "application/json",

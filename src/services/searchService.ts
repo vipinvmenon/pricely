@@ -1,5 +1,5 @@
 import { scraperClient } from '@/lib/scraper/client'
-import { redis } from '@/lib/redis/client'
+import { cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
 import { PLATFORMS } from '@/lib/utils/platforms'
 import type { PriceResult, PlatformCategory, PlatformId, ScrapeResult } from '@/types'
@@ -43,7 +43,7 @@ export async function search(
   if (!process.env.SCRAPER_SERVICE_URL) return MOCK_SEARCH_RESULTS
 
   const cacheKey = keys.search(query, city)
-  const cached = await redis.get<PriceResult[]>(cacheKey).catch(() => null)
+  const cached = await cacheGet<PriceResult[]>(cacheKey)
   if (cached) return cached
 
   const platforms = category
@@ -53,7 +53,7 @@ export async function search(
   const { results } = await scraperClient.scrape({ query, platforms, city, maxResults: 3 })
   const ranked = normaliseAndRank(results)
 
-  await redis.setex(cacheKey, TTL.search, ranked).catch(() => null)
+  await cacheSetex(cacheKey, TTL.search, ranked)
   return ranked
 }
 

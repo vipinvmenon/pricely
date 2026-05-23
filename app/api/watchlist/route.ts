@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { redis } from '@/lib/redis/client'
+import { cacheDel, cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
 import type { WatchlistPageItem } from '@/types'
 
@@ -59,7 +59,7 @@ export async function GET() {
   }
 
   const cacheKey = keys.watchlist(user.id)
-  const cached = await redis.get<WatchlistPageItem[]>(cacheKey).catch(() => null)
+  const cached = await cacheGet<WatchlistPageItem[]>(cacheKey)
   if (cached) {
     const response = NextResponse.json(cached)
     response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
@@ -68,7 +68,7 @@ export async function GET() {
 
   const { watchlistService } = await import('@/services/watchlistService')
   const items = await watchlistService.getWatchlist(user.id)
-  await redis.setex(cacheKey, TTL.watchlist, items).catch(() => null)
+  await cacheSetex(cacheKey, TTL.watchlist, items)
 
   const response = NextResponse.json(items)
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
 
   const { watchlistService } = await import('@/services/watchlistService')
   const result = await watchlistService.addToWatchlist(user.id, parsed.data.productId, parsed.data.city)
-  await redis.del(keys.watchlist(user.id)).catch(() => null)
+  await cacheDel(keys.watchlist(user.id))
 
   const response = NextResponse.json(result, { status: 201 })
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
@@ -130,7 +130,7 @@ export async function DELETE(request: Request) {
 
   const { watchlistService } = await import('@/services/watchlistService')
   await watchlistService.removeFromWatchlist(parsed.data.id, user.id)
-  await redis.del(keys.watchlist(user.id)).catch(() => null)
+  await cacheDel(keys.watchlist(user.id))
 
   const response = NextResponse.json({ success: true })
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)

@@ -1,5 +1,5 @@
 import { scraperClient } from '@/lib/scraper/client'
-import { redis } from '@/lib/redis/client'
+import { cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
 import { PLATFORMS } from '@/lib/utils/platforms'
 import type { TripsResponse, PlatformId } from '@/types'
@@ -19,7 +19,7 @@ function mockFareHistory() {
 
 export async function getFares(from: string, to: string, city: string): Promise<TripsResponse> {
   const cacheKey = keys.trips(from, to, city)
-  const cached = await redis.get<TripsResponse>(cacheKey).catch(() => null)
+  const cached = await cacheGet<TripsResponse>(cacheKey)
   if (cached) return cached
 
   const { results, errors } = await scraperClient.scrapeCabs({
@@ -44,7 +44,7 @@ export async function getFares(from: string, to: string, city: string): Promise<
     errors,
   }
 
-  await redis.setex(cacheKey, TTL.trips, response).catch(() => null)
+  await cacheSetex(cacheKey, TTL.trips, response)
   return response
 }
 

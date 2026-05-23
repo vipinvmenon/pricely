@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { redis } from '@/lib/redis/client'
+import { cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
 import type { TrendingItem } from '@/types'
 
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
   }
 
   const cacheKey = keys.trending(city)
-  const cached = await redis.get<TrendingItem[]>(cacheKey).catch(() => null)
+  const cached = await cacheGet<TrendingItem[]>(cacheKey)
   if (cached) {
     const response = NextResponse.json(cached)
     response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
   // Supabase query: top-10 most-watched products by watchlist count in city
   // Falls back to mock until Supabase is configured
   const items = MOCK_TRENDING
-  await redis.setex(cacheKey, TTL.trending, items).catch(() => null)
+  await cacheSetex(cacheKey, TTL.trending, items)
 
   const response = NextResponse.json(items)
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)

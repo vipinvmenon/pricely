@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "./Button";
+import { useSupabaseUser } from "@/lib/hooks/useSupabaseUser";
 
 const NAV_LINKS = [
 	{ label: "Home", href: "/" },
@@ -11,6 +12,11 @@ const NAV_LINKS = [
 	{ label: "Watchlist", href: "/watchlist" },
 	{ label: "Trips", href: "/cabs" },
 ];
+
+/** Avoid background RSC prefetches — first compile on D: drive can hang 30s+ */
+function shouldPrefetch(href: string): boolean {
+	return href === "/";
+}
 
 function BarChartIcon() {
 	return (
@@ -80,7 +86,23 @@ function MenuIcon() {
 
 export function Nav() {
 	const pathname = usePathname();
+	const router = useRouter();
 	const [mobileOpen, setMobileOpen] = useState(false);
+	const { user, ready, signOut, configured } = useSupabaseUser();
+
+	async function handleSignOut() {
+		await signOut();
+		setMobileOpen(false);
+		router.push("/");
+		router.refresh();
+	}
+
+	const showSignedIn = configured && ready && user;
+	const userLabel =
+		user?.user_metadata?.full_name ??
+		user?.user_metadata?.name ??
+		user?.email ??
+		"Account";
 
 	return (
 		<>
@@ -150,6 +172,7 @@ export function Nav() {
 								<Link
 									key={href}
 									href={href}
+									prefetch={shouldPrefetch(href)}
 									style={{
 										display: "inline-flex",
 										alignItems: "center",
@@ -199,16 +222,39 @@ export function Nav() {
 					>
 						<MoonIcon />
 					</button>
-					<Link href="/signin" style={{ textDecoration: "none" }}>
-						<Button variant="ghost" size="sm">
-							Sign in
-						</Button>
-					</Link>
-					<Link href="/signup" style={{ textDecoration: "none" }}>
-						<Button variant="primary" size="sm">
-							Create account
-						</Button>
-					</Link>
+					{showSignedIn ? (
+						<>
+							<span
+								style={{
+									fontSize: "0.8125rem",
+									color: "var(--text-dim)",
+									maxWidth: 160,
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+									whiteSpace: "nowrap",
+								}}
+								title={userLabel}
+							>
+								{userLabel}
+							</span>
+							<Button variant="ghost" size="sm" type="button" onClick={handleSignOut}>
+								Sign out
+							</Button>
+						</>
+					) : (
+						<>
+							<a href="/signin" style={{ textDecoration: "none" }}>
+								<Button variant="ghost" size="sm" type="button">
+									Sign in
+								</Button>
+							</a>
+							<a href="/signup" style={{ textDecoration: "none" }}>
+								<Button variant="primary" size="sm" type="button">
+									Create account
+								</Button>
+							</a>
+						</>
+					)}
 				</div>
 
 				{/* Mobile hamburger */}
@@ -258,6 +304,7 @@ export function Nav() {
 							<Link
 								key={href}
 								href={href}
+								prefetch={shouldPrefetch(href)}
 								onClick={() => setMobileOpen(false)}
 								style={{
 									padding: "12px 16px",
@@ -281,24 +328,50 @@ export function Nav() {
 							margin: "8px 0",
 						}}
 					/>
-					<Link
-						href="/signin"
-						onClick={() => setMobileOpen(false)}
-						style={{ textDecoration: "none" }}
-					>
-						<Button variant="ghost" size="md" fullWidth>
-							Sign in
-						</Button>
-					</Link>
-					<Link
-						href="/signup"
-						onClick={() => setMobileOpen(false)}
-						style={{ textDecoration: "none" }}
-					>
-						<Button variant="primary" size="md" fullWidth>
-							Create account
-						</Button>
-					</Link>
+					{showSignedIn ? (
+						<>
+							<p
+								style={{
+									fontSize: "0.875rem",
+									color: "var(--text-dim)",
+									margin: "0 0 8px",
+									padding: "0 4px",
+								}}
+							>
+								Signed in as {userLabel}
+							</p>
+							<Button
+								variant="ghost"
+								size="md"
+								fullWidth
+								type="button"
+								onClick={handleSignOut}
+							>
+								Sign out
+							</Button>
+						</>
+					) : (
+						<>
+							<a
+								href="/signin"
+								onClick={() => setMobileOpen(false)}
+								style={{ textDecoration: "none" }}
+							>
+								<Button variant="ghost" size="md" fullWidth type="button">
+									Sign in
+								</Button>
+							</a>
+							<a
+								href="/signup"
+								onClick={() => setMobileOpen(false)}
+								style={{ textDecoration: "none" }}
+							>
+								<Button variant="primary" size="md" fullWidth type="button">
+									Create account
+								</Button>
+							</a>
+						</>
+					)}
 				</div>
 			)}
 
