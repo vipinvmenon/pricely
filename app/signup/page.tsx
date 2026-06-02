@@ -6,6 +6,10 @@ import Link from 'next/link'
 import { Glass } from '@/components/ui/Glass'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
+import { signInWithGoogle } from '@/lib/supabase/authRedirect'
+import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from '@/lib/supabase/config'
+
+const authAvailable = isSupabaseConfigured()
 
 function CheckIcon() {
   return (
@@ -43,6 +47,10 @@ export default function SignUpPage() {
 
   async function handleEmailSignUp(e: React.FormEvent) {
     e.preventDefault()
+    if (!authAvailable) {
+      setError(SUPABASE_SETUP_HINT)
+      return
+    }
     setError(null)
     setLoading(true)
     try {
@@ -60,16 +68,21 @@ export default function SignUpPage() {
   }
 
   async function handleGoogleSignIn() {
+    if (!authAvailable) {
+      setError(SUPABASE_SETUP_HINT)
+      return
+    }
     setError(null)
     setLoading(true)
     try {
       const supabase = createClient()
-      const { error: authError } = await supabase.auth.signInWithOAuth({
-        provider:  'google',
-        options:   { redirectTo: `${window.location.origin}/auth/callback?next=/watchlist` },
-      })
-      if (authError) setError(authError.message)
-    } finally {
+      const { error: authError } = await signInWithGoogle(supabase, '/watchlist')
+      if (authError) {
+        setError(authError.message)
+        setLoading(false)
+      }
+    } catch {
+      setError('Could not start Google sign-in. Try again.')
       setLoading(false)
     }
   }
@@ -200,6 +213,31 @@ export default function SignUpPage() {
             Create your account
           </h2>
 
+          {!authAvailable && (
+            <div
+              style={{
+                background: 'var(--accent-dim)',
+                border: '1px solid var(--accent-border)',
+                borderRadius: 'var(--r-md)',
+                padding: '12px 14px',
+                marginBottom: 16,
+                fontSize: '0.875rem',
+                color: 'var(--text-dim)',
+                lineHeight: 1.5,
+              }}
+            >
+              Local dev mode — sign-up needs Supabase env vars. Browse with mock data on{' '}
+              <Link href="/compare" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                compare
+              </Link>{' '}
+              or{' '}
+              <Link href="/watchlist" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                watchlist
+              </Link>
+              .
+            </div>
+          )}
+
           {error && (
             <div
               style={{
@@ -227,6 +265,7 @@ export default function SignUpPage() {
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Priya Sharma"
                 autoComplete="name"
+                disabled={!authAvailable}
                 style={inputStyle}
               />
             </label>
@@ -241,6 +280,7 @@ export default function SignUpPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
+                disabled={!authAvailable}
                 autoComplete="email"
                 style={inputStyle}
               />
@@ -257,6 +297,7 @@ export default function SignUpPage() {
                 placeholder="Min. 8 characters"
                 required
                 minLength={8}
+                disabled={!authAvailable}
                 autoComplete="new-password"
                 style={inputStyle}
               />
@@ -268,7 +309,7 @@ export default function SignUpPage() {
               <a href="#" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Privacy Policy</a>.
             </p>
 
-            <Button variant="primary" size="md" fullWidth disabled={loading}>
+            <Button variant="primary" size="md" fullWidth disabled={loading || !authAvailable}>
               {loading ? 'Creating account…' : 'Create account'}
             </Button>
           </form>
@@ -283,7 +324,7 @@ export default function SignUpPage() {
             variant="ghost"
             size="md"
             fullWidth
-            disabled={loading}
+            disabled={loading || !authAvailable}
             onClick={handleGoogleSignIn}
           >
             <GoogleIcon /> Continue with Google

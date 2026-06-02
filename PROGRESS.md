@@ -31,8 +31,8 @@
 - [x] `src/components/ui/WatchlistRow.tsx` — single watchlist item row
 - [x] `src/components/ui/FareCard.tsx` — single cab fare result card
 - [x] `src/components/providers/SWRProvider.tsx` — client SWR config wrapper
-- [x] `app/page.tsx` — Home page (hardcoded preview data; trending API not wired yet)
-- [x] `app/compare/page.tsx` — Compare page → wired to `/api/compare`
+- [x] `app/page.tsx` — Home page; trending chips from `GET /api/trending`; hero CTAs link to `/compare` and `#how-it-works`
+- [x] `app/compare/page.tsx` — SWR + URL `q` param; trending chips; verdict from API; Track → watchlist (POST or pending + sign-in)
 - [x] `app/cabs/page.tsx` — Cabs page → wired to `/api/trips`
 - [x] `app/watchlist/page.tsx` — Watchlist page → wired to `/api/watchlist`
 - [x] `app/signin/page.tsx` — Sign in page (wired: `signInWithPassword` + `signInWithOAuth` Google; error display; loading state)
@@ -43,7 +43,7 @@
 ## Phase 1 — Database + Auth
 
 - [x] `supabase/schema.sql` — full DDL with all tables + RLS policies written
-- [ ] **MANUAL** Apply `supabase/schema.sql` to Supabase project via SQL editor
+- [x] **MANUAL** Apply `supabase/schema.sql` to Supabase project via SQL editor (verified: all 5 tables respond via REST)
 - [ ] **MANUAL** Enable Google OAuth provider in Supabase Dashboard → Authentication → Providers
 - [ ] **MANUAL** Configure OAuth redirect URLs (localhost + production)
 - [x] `src/lib/supabase/client.ts` — `createBrowserClient` singleton
@@ -52,7 +52,7 @@
 - [x] `app/auth/callback/route.ts` — Supabase OAuth code exchange; redirects to `next` param after session set
 - [x] `src/types/index.ts` — `tata_cliq`, `myntra`, `blusmart` added to `PlatformId`; `namma_yatri`, `indrive` removed
 - [x] `src/lib/utils/platforms.ts` — Tata Cliq, Myntra, BluSmart added; Namma Yatri, InDrive removed
-- [ ] Smoke-test: `supabase.auth.getUser()` returns null for unauthenticated request without error
+- [x] Smoke-test: `supabase.auth.getUser()` returns null for unauthenticated request (no session; `Auth session missing!` is expected from anon client)
 
 ---
 
@@ -133,7 +133,8 @@
 - [x] `DELETE /api/watchlist` — Zod query, Supabase delete, Redis invalidation
 - [x] `app/watchlist/page.tsx` — SWR; 401 triggers sign-in prompt; optimistic DELETE via `mutate`; `usePendingWatchlist` flush on auth
 - [x] `src/lib/hooks/usePendingWatchlist.ts` — `addPendingWatchlistItem`, `getPendingWatchlistItems`, flush hook
-- [ ] Verify watchlist CRUD end-to-end for authenticated user
+- [x] Product upsert before watchlist insert (`productsService.upsertProduct` + service role)
+- [ ] Verify watchlist CRUD end-to-end for authenticated user (schema + `SUPABASE_SERVICE_ROLE_KEY` OK; API returns 401 when unsigned — **browser sign-in test remaining**)
 
 ---
 

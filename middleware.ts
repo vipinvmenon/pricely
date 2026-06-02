@@ -27,14 +27,14 @@ export async function middleware(request: NextRequest) {
     },
   )
 
-  // Refresh session cookie; do not redirect /watchlist — the page handles 401 via /api/watchlist.
-  // Server redirects here caused Next.js Link prefetch loops (307 → /signin stuck pending).
+  // Refresh session cookie on navigation (no redirects — pages handle auth UX).
   await supabase.auth.getUser()
 
   return supabaseResponse
 }
 
-// Only run session refresh where auth matters — avoids Supabase round-trip on /, /signin, etc.
 export const config = {
-  matcher: ['/api/:path*', '/watchlist'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }

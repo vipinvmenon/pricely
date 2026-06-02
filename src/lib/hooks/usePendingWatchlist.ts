@@ -2,13 +2,11 @@
 
 import { useEffect } from 'react'
 import { useSWRConfig } from 'swr'
+import type { TrackProductPayload } from '@/lib/watchlist/trackProduct'
 
 const LS_KEY = 'pricely_pending_watchlist'
 
-export interface PendingWatchlistItem {
-  productId: string
-  city: string
-}
+export type PendingWatchlistItem = TrackProductPayload
 
 export function addPendingWatchlistItem(item: PendingWatchlistItem): void {
   if (typeof window === 'undefined') return

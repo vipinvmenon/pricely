@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import useSWR, { useSWRConfig } from "swr";
 import { Nav } from "@/components/ui/Nav";
 import { Glass } from "@/components/ui/Glass";
 import { Button } from "@/components/ui/Button";
@@ -8,15 +11,13 @@ import { Chip } from "@/components/ui/Chip";
 import { PriceBadge } from "@/components/ui/PriceBadge";
 import { RetailerRow } from "@/components/ui/RetailerRow";
 import { PriceChart } from "@/components/ui/PriceChart";
-import type { CompareResponse } from "@/types";
-
-const TRENDING_QUERIES = [
-	"iPhone 15 128GB",
-	"Dyson V12",
-	"Asics Novablast 4",
-	"Bose QC Ultra",
-	"Lego Bonsai 10281",
-];
+import { DEFAULT_CITY, DEFAULT_COMPARE_QUERY } from "@/lib/constants";
+import { useSupabaseUser } from "@/lib/hooks/useSupabaseUser";
+import { trackProduct } from "@/lib/watchlist/trackProduct";
+import { normalizeProductCategory } from "@/lib/utils/productCategory";
+import { fetchJson } from "@/lib/utils/fetchJson";
+import { normalizeQuery } from "@/lib/utils/format";
+import type { CompareResponse, TrendingItem } from "@/types";
 
 function SearchIcon() {
 	return (
@@ -58,33 +59,117 @@ function CheckIcon() {
 	);
 }
 
-export default function ComparePage() {
-	const [data, setData] = useState<CompareResponse | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [query, setQuery] = useState("");
+function compareUrl(query: string): string {
+	return `/api/compare?q=${encodeURIComponent(query)}&city=${encodeURIComponent(DEFAULT_CITY)}`;
+}
+
+function ComparePageContent() {
+	const router = useRouter();
+	const searchParams = useSearchParams();
+	const { mutate } = useSWRConfig();
+	const { user, ready: authReady, configured } = useSupabaseUser();
+
+	const paramQuery = searchParams.get("q")?.trim() ?? "";
+	const activeQuery = paramQuery || DEFAULT_COMPARE_QUERY;
+
+	const [inputQuery, setInputQuery] = useState(activeQuery);
 	const [showAll, setShowAll] = useState(false);
+	const [trackState, setTrackState] = useState<"idle" | "loading" | "done">(
+		"idle",
+	);
+	const [trackError, setTrackError] = useState<string | null>(null);
 
 	useEffect(() => {
-		fetch("/api/compare?q=sony+wh-1000xm5")
-			.then((r) => r.json())
-			.then((d: unknown) => {
-				const res = d as Record<string, unknown>;
-				if (res && res.product) {
-					setData(res as unknown as CompareResponse);
-				}
-				setLoading(false);
-			})
-			.catch(() => setLoading(false));
-	}, []);
+		setInputQuery(searchParams.get("q")?.trim() ?? DEFAULT_COMPARE_QUERY);
+		setShowAll(false);
+	}, [searchParams]);
+
+	const {
+		data,
+		error,
+		isLoading,
+	} = useSWR<CompareResponse>(compareUrl(activeQuery), (url: string) =>
+		fetchJson<CompareResponse>(url),
+	);
+
+	const { data: trending } = useSWR<TrendingItem[]>(
+		`/api/trending?city=${encodeURIComponent(DEFAULT_CITY)}`,
+		(url: string) => fetchJson<TrendingItem[]>(url),
+	);
+
+	const trendingQueries =
+		trending?.map((item) => item.query) ??
+		[
+			"iPhone 15 128GB",
+			"Dyson V12",
+			"Asics Novablast 4",
+			"Bose QC Ultra",
+			"Lego Bonsai 10281",
+		];
 
 	const retailers = data?.retailers ?? [];
 	const visibleRetailers = showAll ? retailers : retailers.slice(0, 6);
+	const lowest = retailers.find((r) => r.isLowest) ?? retailers[0];
+	const verdict = data?.verdict;
+
+	function navigateToQuery(raw: string) {
+		const q = normalizeQuery(raw);
+		if (!q) return;
+		router.replace(`/compare?q=${encodeURIComponent(q)}`);
+	}
+
+	function handleSubmit(e: FormEvent) {
+		e.preventDefault();
+		navigateToQuery(inputQuery);
+	}
+
+	async function handleTrack() {
+		if (!data?.product.id || trackState === "loading") return;
+		setTrackState("loading");
+		setTrackError(null);
+		try {
+			const result = await trackProduct(
+				{
+					productId: data.product.id,
+					city: DEFAULT_CITY,
+					title: data.product.name,
+					category: normalizeProductCategory(data.product.category),
+					subtitle:
+						[data.product.brand, data.product.category]
+							.filter(Boolean)
+							.join(" · ") || undefined,
+					imageUrl: data.product.image,
+				},
+				Boolean(user),
+			);
+			if (result === "synced") {
+				await mutate("/api/watchlist");
+			}
+			if (result === "pending") {
+				router.push(
+					configured
+						? `/signin?next=${encodeURIComponent("/watchlist")}`
+						: "/watchlist",
+				);
+				return;
+			}
+			setTrackState("done");
+		} catch (err) {
+			setTrackState("idle");
+			const message =
+				err instanceof Error ? err.message : "Could not save to watchlist.";
+			setTrackError(
+				message.includes("service_role")
+					? "Add SUPABASE_SERVICE_ROLE_KEY to .env.local and restart the dev server."
+					: message || "Could not save to watchlist. Did you run supabase/schema.sql?",
+			);
+		}
+	}
 
 	return (
 		<div style={{ minHeight: "100vh", background: "var(--bg0)" }}>
 			<Nav />
 
-			{/* Header */}
 			<section
 				style={{ padding: "60px 24px 40px", maxWidth: 1100, margin: "0 auto" }}
 			>
@@ -120,49 +205,49 @@ export default function ComparePage() {
 					buying?
 				</h1>
 
-				{/* Search bar */}
-				<Glass
-					variant="plate"
-					style={{
-						display: "flex",
-						alignItems: "center",
-						borderRadius: "var(--r-pill)",
-						padding: "0 16px",
-						marginBottom: 16,
-					}}
-				>
-					<span style={{ color: "var(--text-faint)", flexShrink: 0 }}>
-						<SearchIcon />
-					</span>
-					<input
-						type="text"
-						value={query}
-						onChange={(e) => setQuery(e.target.value)}
-						placeholder="Search for any product…"
+				<form onSubmit={handleSubmit}>
+					<Glass
+						variant="plate"
 						style={{
-							flex: 1,
-							background: "none",
-							border: "none",
-							outline: "none",
-							color: "var(--text)",
-							fontSize: "1rem",
-							fontFamily: "inherit",
-							padding: "16px 12px",
+							display: "flex",
+							alignItems: "center",
+							borderRadius: "var(--r-pill)",
+							padding: "0 16px",
+							marginBottom: 16,
 						}}
-					/>
-					<Button variant="primary" size="md">
-						Compare
-					</Button>
-				</Glass>
+					>
+						<span style={{ color: "var(--text-faint)", flexShrink: 0 }}>
+							<SearchIcon />
+						</span>
+						<input
+							type="text"
+							value={inputQuery}
+							onChange={(e) => setInputQuery(e.target.value)}
+							placeholder="Search for any product…"
+							style={{
+								flex: 1,
+								background: "none",
+								border: "none",
+								outline: "none",
+								color: "var(--text)",
+								fontSize: "1rem",
+								fontFamily: "inherit",
+								padding: "16px 12px",
+							}}
+						/>
+						<Button variant="primary" size="md" type="submit">
+							Compare
+						</Button>
+					</Glass>
+				</form>
 
-				{/* Trending chips */}
 				<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-					{TRENDING_QUERIES.map((q) => (
+					{trendingQueries.map((q) => (
 						<Chip
 							key={q}
-							variant="default"
+							variant={normalizeQuery(q) === normalizeQuery(activeQuery) ? "active" : "default"}
 							size="sm"
-							onClick={() => setQuery(q)}
+							onClick={() => navigateToQuery(q)}
 						>
 							{q}
 						</Chip>
@@ -170,8 +255,7 @@ export default function ComparePage() {
 				</div>
 			</section>
 
-			{/* Results */}
-			{loading ? (
+			{isLoading ? (
 				<div
 					style={{
 						textAlign: "center",
@@ -181,6 +265,17 @@ export default function ComparePage() {
 					}}
 				>
 					Loading…
+				</div>
+			) : error ? (
+				<div
+					style={{
+						textAlign: "center",
+						padding: "60px 24px",
+						color: "var(--danger)",
+						fontFamily: "var(--font-mono)",
+					}}
+				>
+					Could not load prices. Try again.
 				</div>
 			) : data ? (
 				<section
@@ -194,9 +289,7 @@ export default function ComparePage() {
 						}}
 						className="compare-grid"
 					>
-						{/* Left column — product info */}
 						<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-							{/* Image placeholder */}
 							<Glass
 								variant="plate"
 								style={{
@@ -220,7 +313,6 @@ export default function ComparePage() {
 								</span>
 							</Glass>
 
-							{/* Product details */}
 							<div>
 								<div
 									style={{
@@ -254,11 +346,11 @@ export default function ComparePage() {
 										marginBottom: 6,
 									}}
 								>
-									<PriceBadge value={retailers[0]?.price ?? 0} size="lg" />
-									{retailers[0]?.mrp && (
-										<PriceBadge value={retailers[0].mrp} size="sm" strike />
+									<PriceBadge value={lowest?.price ?? 0} size="lg" />
+									{lowest?.mrp && (
+										<PriceBadge value={lowest.mrp} size="sm" strike />
 									)}
-									{retailers[0]?.mrp && retailers[0]?.price && (
+									{lowest?.mrp && lowest?.price && (
 										<span
 											style={{
 												fontSize: "0.875rem",
@@ -268,66 +360,98 @@ export default function ComparePage() {
 										>
 											-
 											{Math.round(
-												((retailers[0].mrp - retailers[0].price) /
-													retailers[0].mrp) *
-													100,
+												((lowest.mrp - lowest.price) / lowest.mrp) * 100,
 											)}
 											%
 										</span>
 									)}
 								</div>
+							</div>
 
-								<div
+							{verdict && (
+								<Glass
+									variant="plate"
 									style={{
-										fontSize: "0.8125rem",
-										color: "var(--text-faint)",
-										marginBottom: 20,
+										padding: "var(--sp-4)",
+										borderLeft: "2px solid var(--accent)",
+										borderRadius: "var(--r-md)",
 									}}
 								>
-									₹6,540 below 90-day median · last drop 4 days ago
-								</div>
-							</div>
-
-							{/* Verdict card */}
-							<Glass
-								variant="plate"
-								style={{
-									padding: "var(--sp-4)",
-									borderLeft: "2px solid var(--accent)",
-									borderRadius: "var(--r-md)",
-								}}
-							>
-								<div
-									style={{ display: "flex", gap: 10, alignItems: "flex-start" }}
-								>
-									<CheckIcon />
-									<p
-										style={{
-											fontSize: "0.875rem",
-											color: "var(--text-dim)",
-											margin: 0,
-											lineHeight: 1.5,
-										}}
+									<div
+										style={{ display: "flex", gap: 10, alignItems: "flex-start" }}
 									>
-										<strong style={{ color: "var(--text)", fontWeight: 600 }}>
-											Buy now.
-										</strong>{" "}
-										Price model says wait gives ≤2% upside.
-									</p>
-								</div>
-							</Glass>
+										<CheckIcon />
+										<p
+											style={{
+												fontSize: "0.875rem",
+												color: "var(--text-dim)",
+												margin: 0,
+												lineHeight: 1.5,
+											}}
+										>
+											<strong style={{ color: "var(--text)", fontWeight: 600 }}>
+												{verdict.action === "buy" ? "Buy now." : "Wait."}
+											</strong>{" "}
+											{verdict.reason}
+										</p>
+									</div>
+								</Glass>
+							)}
+
+							{trackError && (
+								<p
+									style={{
+										fontSize: "0.8125rem",
+										color: "var(--danger)",
+										margin: 0,
+										lineHeight: 1.5,
+									}}
+								>
+									{trackError}
+								</p>
+							)}
 
 							<div style={{ display: "flex", gap: 10 }}>
-								<Button variant="primary" size="md" style={{ flex: 1 }}>
-									Buy at Amazon
+								<Button
+									variant="primary"
+									size="md"
+									style={{ flex: 1 }}
+									disabled={!lowest?.buyUrl}
+									onClick={() => {
+										if (lowest?.buyUrl) window.open(lowest.buyUrl, "_blank");
+									}}
+								>
+									Buy at {lowest?.name ?? "retailer"}
 								</Button>
-								<Button variant="ghost" size="md" style={{ flex: 1 }}>
-									Track
+								<Button
+									variant="ghost"
+									size="md"
+									style={{ flex: 1 }}
+									disabled={!authReady || trackState === "loading"}
+									onClick={() => void handleTrack()}
+								>
+									{trackState === "done"
+										? "Tracked"
+										: trackState === "loading"
+											? "Saving…"
+											: "Track"}
 								</Button>
 							</div>
+							{trackState === "done" && (
+								<Link
+									href="/watchlist"
+									style={{
+										fontSize: "0.8125rem",
+										color: "var(--accent)",
+										fontWeight: 600,
+										textDecoration: "none",
+									}}
+								>
+									View watchlist →
+								</Link>
+							)}
 						</div>
 
-						{/* Right column — retailer table */}
 						<div>
 							<div
 								style={{
@@ -348,8 +472,9 @@ export default function ComparePage() {
 										color: "var(--text-dim)",
 									}}
 								>
-									<span className="pulse-dot" />6 of 12 retailers · sorted by
-									price
+									<span className="pulse-dot" />
+									{visibleRetailers.length} of {retailers.length} retailers ·
+									sorted by price
 								</div>
 								<div style={{ display: "flex", gap: 8 }}>
 									{["Price", "Delivery", "Trust"].map((s, i) => (
@@ -368,7 +493,6 @@ export default function ComparePage() {
 								variant="plate"
 								style={{ padding: "8px 0", borderRadius: "var(--r-lg)" }}
 							>
-								{/* Table header */}
 								<div
 									style={{
 										display: "grid",
@@ -404,7 +528,7 @@ export default function ComparePage() {
 
 								{visibleRetailers.map((r) => (
 									<RetailerRow
-										key={r.name}
+										key={`${r.rank}-${r.name}`}
 										rank={r.rank}
 										name={r.name}
 										isLowest={r.isLowest}
@@ -417,54 +541,47 @@ export default function ComparePage() {
 									/>
 								))}
 
-								<div
-									style={{
-										padding: "12px 20px",
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "space-between",
-										borderTop: "1px solid var(--glass-plate-border)",
-									}}
-								>
-									<span
+								{retailers.length > 6 && (
+									<div
 										style={{
-											fontSize: "0.8125rem",
-											color: "var(--text-faint)",
+											padding: "12px 20px",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "space-between",
+											borderTop: "1px solid var(--glass-plate-border)",
 										}}
 									>
-										+ 6 more retailers · prices verified 12 min ago
-									</span>
-									<button
-										onClick={() => setShowAll(!showAll)}
-										style={{
-											background: "none",
-											border: "none",
-											cursor: "pointer",
-											color: "var(--accent)",
-											fontSize: "0.8125rem",
-											fontWeight: 600,
-											fontFamily: "inherit",
-										}}
-									>
-										{showAll ? "Show less" : "Show all →"}
-									</button>
-								</div>
+										<span
+											style={{
+												fontSize: "0.8125rem",
+												color: "var(--text-faint)",
+											}}
+										>
+											+ {retailers.length - 6} more retailers
+										</span>
+										<button
+											type="button"
+											onClick={() => setShowAll(!showAll)}
+											style={{
+												background: "none",
+												border: "none",
+												cursor: "pointer",
+												color: "var(--accent)",
+												fontSize: "0.8125rem",
+												fontWeight: 600,
+												fontFamily: "inherit",
+											}}
+										>
+											{showAll ? "Show less" : "Show all →"}
+										</button>
+									</div>
+								)}
 							</Glass>
 						</div>
 					</div>
 
-					{/* Price history chart */}
-					<div style={{ marginTop: 48 }}>
-						<div
-							style={{
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "space-between",
-								marginBottom: 16,
-								flexWrap: "wrap",
-								gap: 12,
-							}}
-						>
+					{data.history.length > 0 && (
+						<div style={{ marginTop: 48 }}>
 							<div
 								style={{
 									display: "flex",
@@ -472,31 +589,38 @@ export default function ComparePage() {
 									gap: 8,
 									fontSize: "0.8125rem",
 									color: "var(--text-dim)",
+									marginBottom: 16,
 								}}
 							>
 								<span className="pulse-dot" />
-								Price history · 12 months
+								Price history · 90 days
 							</div>
+
+							<h2
+								style={{
+									fontSize: "1.75rem",
+									fontWeight: 500,
+									letterSpacing: "-0.02em",
+									color: "var(--text)",
+									margin: "0 0 24px",
+								}}
+							>
+								{verdict?.action === "buy" ? (
+									<>
+										Currently the{" "}
+										<span style={{ color: "var(--accent)" }}>lowest</span> in
+										recent months.
+									</>
+								) : (
+									<>Price trend over the last 90 days.</>
+								)}
+							</h2>
+
+							<Glass variant="plate" style={{ padding: "var(--sp-6)" }}>
+								<PriceChart data={data.history} />
+							</Glass>
 						</div>
-
-						<h2
-							style={{
-								fontSize: "1.75rem",
-								fontWeight: 500,
-								letterSpacing: "-0.02em",
-								color: "var(--text)",
-								margin: "0 0 24px",
-							}}
-						>
-							Currently the{" "}
-							<span style={{ color: "var(--accent)" }}>lowest</span> in 7
-							months.
-						</h2>
-
-						<Glass variant="plate" style={{ padding: "var(--sp-6)" }}>
-							<PriceChart data={data.history} />
-						</Glass>
-					</div>
+					)}
 				</section>
 			) : null}
 
@@ -506,5 +630,29 @@ export default function ComparePage() {
         }
       `}</style>
 		</div>
+	);
+}
+
+export default function ComparePage() {
+	return (
+		<Suspense
+			fallback={
+				<div style={{ minHeight: "100vh", background: "var(--bg0)" }}>
+					<Nav />
+					<div
+						style={{
+							textAlign: "center",
+							padding: "120px 24px",
+							color: "var(--text-faint)",
+							fontFamily: "var(--font-mono)",
+						}}
+					>
+						Loading…
+					</div>
+				</div>
+			}
+		>
+			<ComparePageContent />
+		</Suspense>
 	);
 }

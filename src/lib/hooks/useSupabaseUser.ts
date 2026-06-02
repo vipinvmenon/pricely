@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { isSupabaseConfigured } from '@/lib/supabase/config'
 
-const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL)
+const supabaseConfigured = isSupabaseConfigured()
 
 export function useSupabaseUser() {
   const [user, setUser] = useState<User | null>(null)

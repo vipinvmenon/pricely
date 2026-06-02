@@ -7,6 +7,8 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
     'Wrong email or password. If you are new, create an account first.',
   'Email not confirmed':
     'Confirm your email first — check your inbox for the Supabase confirmation link.',
+  'Provider is not enabled':
+    'Enable Google under Supabase → Authentication → Providers, then add redirect URL http://localhost:3000/auth/callback',
 }
 
 export function formatAuthError(raw: string | null): string | null {

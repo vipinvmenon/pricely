@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import useSWR, { useSWRConfig } from "swr";
 import { Nav } from "@/components/ui/Nav";
 import { Glass } from "@/components/ui/Glass";
@@ -8,12 +9,13 @@ import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
 import { WatchlistRow } from "@/components/ui/WatchlistRow";
 import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { fetchJson } from "@/lib/utils/fetchJson";
 import { usePendingWatchlist } from "@/lib/hooks/usePendingWatchlist";
 import type { WatchlistPageItem } from "@/types";
 
 const WATCHLIST_KEY = "/api/watchlist";
-const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const supabaseConfigured = isSupabaseConfigured();
 
 export default function WatchlistPage() {
 	const { mutate } = useSWRConfig();
@@ -130,9 +132,11 @@ export default function WatchlistPage() {
 						</h1>
 					</div>
 
-					<Button variant="primary" size="md">
-						+ Add product
-					</Button>
+					<Link href="/compare" style={{ textDecoration: "none" }}>
+						<Button variant="primary" size="md" type="button">
+							+ Add product
+						</Button>
+					</Link>
 				</div>
 
 				{/* Stats row */}
@@ -228,9 +232,16 @@ export default function WatchlistPage() {
 							borderRadius: "var(--r-lg)",
 						}}
 					>
-						<p style={{ color: "var(--text-dim)", marginBottom: 24 }}>
-							Your watchlist is empty. Search for a product and add it.
+						<p style={{ color: "var(--text-dim)", marginBottom: 24, lineHeight: 1.6 }}>
+							Your watchlist is empty. Open Compare, pick a product, then click{" "}
+							<strong style={{ color: "var(--text)" }}>Track</strong> to save it
+							here.
 						</p>
+						<Link href="/compare" style={{ textDecoration: "none" }}>
+							<Button variant="primary" size="md" type="button">
+								Compare products
+							</Button>
+						</Link>
 					</Glass>
 				) : (
 					<Glass

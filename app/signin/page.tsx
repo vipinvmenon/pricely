@@ -6,7 +6,11 @@ import Link from 'next/link'
 import { Glass } from '@/components/ui/Glass'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
+import { getSafeNextPath, signInWithGoogle } from '@/lib/supabase/authRedirect'
+import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from '@/lib/supabase/config'
 import { formatAuthError } from '@/lib/utils/authErrors'
+
+const authAvailable = isSupabaseConfigured()
 
 function CheckIcon() {
   return (
@@ -45,6 +49,7 @@ function SignInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlError = formatAuthError(searchParams.get('error'))
+  const nextPath = getSafeNextPath(searchParams.get('next'))
   const [email, setEmail]           = useState('')
   const [password, setPassword]     = useState('')
   const [loading, setLoading]       = useState(false)
@@ -52,6 +57,10 @@ function SignInForm() {
 
   async function handleEmailSignIn(e: React.FormEvent) {
     e.preventDefault()
+    if (!authAvailable) {
+      setError(SUPABASE_SETUP_HINT)
+      return
+    }
     setError(null)
     setLoading(true)
     try {
@@ -61,25 +70,29 @@ function SignInForm() {
         setError(formatAuthError(authError.message) ?? authError.message)
         return
       }
-      router.push('/watchlist')
+      router.refresh()
+      router.push(nextPath)
     } finally {
       setLoading(false)
     }
   }
 
   async function handleGoogleSignIn() {
+    if (!authAvailable) {
+      setError(SUPABASE_SETUP_HINT)
+      return
+    }
     setError(null)
     setLoading(true)
     try {
       const supabase = createClient()
-      const { error: authError } = await supabase.auth.signInWithOAuth({
-        provider:  'google',
-        options:   { redirectTo: `${window.location.origin}/auth/callback?next=/watchlist` },
-      })
+      const { error: authError } = await signInWithGoogle(supabase, nextPath)
       if (authError) {
         setError(formatAuthError(authError.message) ?? authError.message)
+        setLoading(false)
       }
-    } finally {
+    } catch {
+      setError('Could not start Google sign-in. Try again.')
       setLoading(false)
     }
   }
@@ -195,6 +208,31 @@ function SignInForm() {
             Sign in to Pricely
           </h2>
 
+          {!authAvailable && (
+            <div
+              style={{
+                background: 'var(--accent-dim)',
+                border: '1px solid var(--accent-border)',
+                borderRadius: 'var(--r-md)',
+                padding: '12px 14px',
+                marginBottom: 16,
+                fontSize: '0.875rem',
+                color: 'var(--text-dim)',
+                lineHeight: 1.5,
+              }}
+            >
+              Local dev mode — sign-in is disabled without Supabase env vars. You can still use{' '}
+              <Link href="/watchlist" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                watchlist
+              </Link>{' '}
+              and{' '}
+              <Link href="/compare" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                compare
+              </Link>{' '}
+              with mock data.
+            </div>
+          )}
+
           {error && (
             <div
               style={{
@@ -222,6 +260,7 @@ function SignInForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
+                disabled={!authAvailable}
                 autoComplete="email"
                 style={inputStyle}
               />
@@ -239,12 +278,13 @@ function SignInForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                disabled={!authAvailable}
                 autoComplete="current-password"
                 style={inputStyle}
               />
             </label>
 
-            <Button type="submit" variant="primary" size="md" fullWidth disabled={loading}>
+            <Button type="submit" variant="primary" size="md" fullWidth disabled={loading || !authAvailable}>
               {loading ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
@@ -260,7 +300,7 @@ function SignInForm() {
             variant="ghost"
             size="md"
             fullWidth
-            disabled={loading}
+            disabled={loading || !authAvailable}
             onClick={handleGoogleSignIn}
           >
             <GoogleIcon /> Continue with Google

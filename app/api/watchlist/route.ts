@@ -36,6 +36,10 @@ const MOCK_WATCHLIST: WatchlistPageItem[] = [
 const PostBodySchema = z.object({
   productId: z.string().min(1),
   city:      z.string().min(1).default('mumbai'),
+  title:     z.string().min(1).optional(),
+  category:  z.enum(['grocery', 'electronics', 'cabs']).optional(),
+  subtitle:  z.string().optional(),
+  imageUrl:  z.string().optional(),
 })
 
 const DeleteQuerySchema = z.object({
@@ -97,8 +101,27 @@ export async function POST(request: Request) {
     )
   }
 
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+    return NextResponse.json(
+      { error: 'service_role_not_configured', message: 'Add SUPABASE_SERVICE_ROLE_KEY to .env.local' },
+      { status: 503 },
+    )
+  }
+
+  const { productsService } = await import('@/services/productsService')
+  const { normalizeProductCategory } = await import('@/lib/utils/productCategory')
+
+  const { productId, city, title, category, subtitle, imageUrl } = parsed.data
+  await productsService.upsertProduct({
+    id:       productId,
+    title:    title ?? productId,
+    category: category ?? normalizeProductCategory('electronics'),
+    subtitle,
+    imageUrl,
+  })
+
   const { watchlistService } = await import('@/services/watchlistService')
-  const result = await watchlistService.addToWatchlist(user.id, parsed.data.productId, parsed.data.city)
+  const result = await watchlistService.addToWatchlist(user.id, productId, city)
   await cacheDel(keys.watchlist(user.id))
 
   const response = NextResponse.json(result, { status: 201 })

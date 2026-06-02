@@ -1,10 +1,15 @@
 "use client";
 
+import Link from "next/link";
+import useSWR from "swr";
 import { Nav } from "@/components/ui/Nav";
 import { Glass } from "@/components/ui/Glass";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
+import { DEFAULT_CITY } from "@/lib/constants";
+import { fetchJson } from "@/lib/utils/fetchJson";
 import { formatINR } from "@/lib/utils/format";
+import type { TrendingItem } from "@/types";
 
 const WATCHLIST_PREVIEW = [
 	{ name: "Sony WH-1000XM5", retailer: "Amazon", price: 23450, save: 6540 },
@@ -163,6 +168,11 @@ const SALE_CALENDAR = [
 ];
 
 export default function HomePage() {
+	const { data: trending, isLoading: trendingLoading } = useSWR<TrendingItem[]>(
+		`/api/trending?city=${encodeURIComponent(DEFAULT_CITY)}`,
+		(url: string) => fetchJson<TrendingItem[]>(url),
+	);
+
 	return (
 		<div style={{ minHeight: "100vh", background: "var(--bg0)" }}>
 			<Nav />
@@ -230,13 +240,49 @@ export default function HomePage() {
 						</h1>
 
 						<div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-							<Button variant="primary" size="lg">
-								Track a product
-							</Button>
-							<Button variant="ghost" size="lg">
-								How it works →
-							</Button>
+							<Link href="/compare" style={{ textDecoration: "none" }}>
+								<Button variant="primary" size="lg" type="button">
+									Track a product
+								</Button>
+							</Link>
+							<a href="#how-it-works" style={{ textDecoration: "none" }}>
+								<Button variant="ghost" size="lg" type="button">
+									How it works →
+								</Button>
+							</a>
 						</div>
+
+						{(trendingLoading || (trending && trending.length > 0)) && (
+							<div style={{ marginTop: 28 }}>
+								<div
+									style={{
+										fontSize: "0.75rem",
+										fontFamily: "var(--font-mono)",
+										color: "var(--text-faint)",
+										letterSpacing: "0.08em",
+										textTransform: "uppercase",
+										marginBottom: 12,
+									}}
+								>
+									Trending now
+								</div>
+								<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+									{trendingLoading
+										? null
+										: trending?.map((item) => (
+												<Link
+													key={item.id}
+													href={`/compare?q=${encodeURIComponent(item.query)}`}
+													style={{ textDecoration: "none" }}
+												>
+													<Chip variant="default" size="sm">
+														{item.query}
+													</Chip>
+												</Link>
+											))}
+								</div>
+							</div>
+						)}
 					</div>
 
 					{/* Right — stats */}
@@ -293,6 +339,7 @@ export default function HomePage() {
 
 			{/* How it works */}
 			<section
+				id="how-it-works"
 				style={{ padding: "0 24px 100px", maxWidth: 1200, margin: "0 auto" }}
 			>
 				<div
