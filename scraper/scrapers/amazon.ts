@@ -146,10 +146,12 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
              el.querySelector('.a-text-strike')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
           ) || undefined,
           url: (() => {
-            const a = el.querySelector('h2 a[href]') as HTMLAnchorElement | null
+            const a = el.querySelector('a.a-link-normal[href*="/dp/"]') ||
+                      el.querySelector('h2 a[href]') ||
+                      el.querySelector('a[href*="/dp/"]')
             if (!a) return ''
-            const href = a.getAttribute('href') ?? ''
-            return href.startsWith('http') ? href : `https://www.amazon.in${href}`
+            const href = a.getAttribute('href') || ''
+            return href.startsWith('http') ? href : 'https://www.amazon.in' + href
           })(),
           outOfStock: !!el.querySelector('[class*="out-of-stock"]'),
         })),
