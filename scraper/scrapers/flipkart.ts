@@ -57,9 +57,9 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
   try {
     await page.goto(`https://www.flipkart.com/search?q=${encodeURIComponent(query)}`, {
       waitUntil: 'domcontentloaded',
-      timeout:   12_000,
+      timeout:   25_000,
     })
-    await page.waitForSelector('._1AtVbE', { timeout: 8_000 })
+    await page.waitForSelector('._1AtVbE,[data-id]', { timeout: 15_000 })
 
     const items = await page.$$eval(
       '._1AtVbE',

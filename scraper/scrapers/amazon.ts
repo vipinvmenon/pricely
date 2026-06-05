@@ -132,14 +132,25 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
       '[data-component-type="s-search-result"]',
       (els, max) =>
         els.slice(0, max).map(el => ({
-          title: el.querySelector('h2 span')?.textContent?.trim() ?? '',
+          title: (
+            el.querySelector('.a-size-medium.a-color-base.a-text-normal') ??
+            el.querySelector('h2 a span') ??
+            el.querySelector('h2 span')
+          )?.textContent?.trim() ?? '',
           price: parseFloat(
-            (el.querySelector('.a-price .a-offscreen')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
+            (el.querySelector('.a-price[data-a-color="base"] .a-offscreen')?.textContent ??
+             el.querySelector('.a-price .a-offscreen')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
           ),
           mrp: parseFloat(
-            (el.querySelector('.a-text-strike')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
+            (el.querySelector('.a-price[data-a-color="secondary"] .a-offscreen')?.textContent ??
+             el.querySelector('.a-text-strike')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
           ) || undefined,
-          url: (el.querySelector('h2 a') as HTMLAnchorElement | null)?.href ?? '',
+          url: (() => {
+            const a = el.querySelector('h2 a[href]') as HTMLAnchorElement | null
+            if (!a) return ''
+            const href = a.getAttribute('href') ?? ''
+            return href.startsWith('http') ? href : `https://www.amazon.in${href}`
+          })(),
           outOfStock: !!el.querySelector('[class*="out-of-stock"]'),
         })),
       maxResults,
