@@ -146,12 +146,24 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
              el.querySelector('.a-text-strike')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
           ) || undefined,
           url: (() => {
-            const a = el.querySelector('a.a-link-normal[href*="/dp/"]') ||
-                      el.querySelector('h2 a[href]') ||
-                      el.querySelector('a[href*="/dp/"]')
+            const anchors = Array.from(el.querySelectorAll('a[href]'))
+            const a = anchors.find(x => {
+              const h = x.getAttribute('href') || ''
+              return h.includes('/dp/') || h.includes('%2Fdp%2F') || h.includes('/sspa/click')
+            }) || anchors[0]
             if (!a) return ''
             const href = a.getAttribute('href') || ''
-            return href.startsWith('http') ? href : 'https://www.amazon.in' + href
+            if (!href) return ''
+            const base = 'https://www.amazon.in'
+            const abs = href.startsWith('http') ? href : base + href
+            if (abs.includes('/sspa/click')) {
+              try {
+                const u = new URL(abs)
+                const target = u.searchParams.get('url')
+                if (target) return base + decodeURIComponent(target).split('?')[0]
+              } catch (_) { /* fall through */ }
+            }
+            return abs.split('?')[0]
           })(),
           outOfStock: !!el.querySelector('[class*="out-of-stock"]'),
         })),
