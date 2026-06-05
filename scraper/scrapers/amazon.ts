@@ -119,14 +119,23 @@ async function searchViaApi(
 }
 
 async function searchViaPlaywright(query: string, maxResults: number): Promise<ScraperResult[]> {
-  const browser = await chromium.launch({ headless: true })
-  const page    = await browser.newPage()
+  const browser  = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+  })
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    viewport:  { width: 1280, height: 800 },
+    locale:    'en-IN',
+    extraHTTPHeaders: { 'Accept-Language': 'en-IN,en;q=0.9' },
+  })
+  const page = await context.newPage()
   try {
     await page.goto(`https://www.amazon.in/s?k=${encodeURIComponent(query)}`, {
       waitUntil: 'domcontentloaded',
-      timeout:   12_000,
+      timeout:   20_000,
     })
-    await page.waitForSelector('[data-component-type="s-search-result"]', { timeout: 8_000 })
+    await page.waitForSelector('[data-component-type="s-search-result"]', { timeout: 12_000 })
 
     const items = await page.$$eval(
       '[data-component-type="s-search-result"]',
@@ -184,6 +193,7 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
         scrapedAt:  new Date().toISOString(),
       }))
   } finally {
+    await context.close()
     await browser.close()
   }
 }
