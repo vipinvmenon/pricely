@@ -59,20 +59,27 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
       waitUntil: 'domcontentloaded',
       timeout:   25_000,
     })
-    await page.waitForSelector('._1AtVbE,[data-id]', { timeout: 15_000 })
+    await page.waitForSelector('[data-id]', { timeout: 15_000 })
 
     const items = await page.$$eval(
-      '._1AtVbE',
+      '[data-id]',
       (els, max) =>
         els.slice(0, max).map(el => ({
-          title: el.querySelector('._4rR01T,a.s1Q9rs,a.IRpwTa')?.textContent?.trim() ?? '',
+          title: (
+            el.querySelector('[class*="KzDlHZ"],[class*="IRpwTa"],[class*="s1Q9rs"],[class*="WKTcLC"],[class*="RcXBOT"]')
+          )?.textContent?.trim() ?? '',
           price: parseFloat(
-            (el.querySelector('._30jeq3')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
+            (el.querySelector('[class*="Nx9bqj"],[class*="_30jeq3"],[class*="hl05eU"]')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
           ),
           mrp: parseFloat(
-            (el.querySelector('._3I9_wc')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
+            (el.querySelector('[class*="_3I9_wc"],[class*="yRaY8j"]')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
           ) || undefined,
-          url: (el.querySelector('a._1fQZEK,a.s1Q9rs,a.IRpwTa') as HTMLAnchorElement | null)?.href ?? '',
+          url: (() => {
+            const a = el.querySelector('a[href]') as HTMLAnchorElement | null
+            if (!a) return ''
+            const href = a.getAttribute('href') || ''
+            return href.startsWith('http') ? href : 'https://www.flipkart.com' + href
+          })(),
           outOfStock: !!el.querySelector('[class*="out-of-stock"]'),
         })),
       maxResults,

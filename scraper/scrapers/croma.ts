@@ -9,24 +9,26 @@ export const croma: Scraper = async ({ query, maxResults }) =>
     try {
       await page.goto(`https://www.croma.com/search?q=${encodeURIComponent(query)}`, {
         waitUntil: 'domcontentloaded',
-        timeout:   12_000,
+        timeout:   20_000,
       })
-      await page.waitForSelector('.product-item', { timeout: 8_000 })
+      await page.waitForSelector('.cp-product,.product-item,.plp-product-wrapper', { timeout: 12_000 })
 
       const items = await page.$$eval(
-        '.product-item',
+        '.cp-product,.product-item,.plp-product-wrapper',
         (els, max) =>
           els.slice(0, max).map(el => ({
-            title:      el.querySelector('h3.product-title')?.textContent?.trim() ?? '',
+            title:      (
+              el.querySelector('h3.product-title,h3[class*="title"],a[class*="title"],[class*="product-title"]')
+            )?.textContent?.trim() ?? '',
             price:      parseFloat(
-              (el.querySelector('.pdp-price strong, .new-price')?.textContent ?? '0')
+              (el.querySelector('[class*="pdp-price"] strong,[class*="new-price"],[class*="selling-price"],[class*="offer-price"]')?.textContent ?? '0')
                 .replace(/[^0-9.]/g, ''),
             ),
             mrp:        parseFloat(
-              (el.querySelector('.line-through')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
+              (el.querySelector('[class*="line-through"],[class*="mrp"],[class*="old-price"]')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
             ) || undefined,
             url:        (el.querySelector('a') as HTMLAnchorElement | null)?.href ?? '',
-            outOfStock: !!el.querySelector('.out-of-stock, [class*="outOfStock"]'),
+            outOfStock: !!el.querySelector('[class*="out-of-stock"],[class*="outOfStock"]'),
           })),
         maxResults,
       )
