@@ -1,21 +1,18 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { searchService } from '@/services/searchService'
-import type { PlatformCategory } from '@/types'
 
 const QuerySchema = z.object({
-  q:        z.string().min(1).max(200),
-  city:     z.string().default('mumbai'),
-  category: z.enum(['grocery', 'electronics']).optional(),
+  q:    z.string().min(1).max(200),
+  city: z.string().default('mumbai'),
 })
 
 export async function GET(request: Request) {
   const start = Date.now()
   const { searchParams } = new URL(request.url)
   const parsed = QuerySchema.safeParse({
-    q:        searchParams.get('q') ?? undefined,
-    city:     searchParams.get('city') ?? undefined,
-    category: searchParams.get('category') ?? undefined,
+    q:    searchParams.get('q') ?? undefined,
+    city: searchParams.get('city') ?? undefined,
   })
 
   if (!parsed.success) {
@@ -25,12 +22,8 @@ export async function GET(request: Request) {
     )
   }
 
-  const { q, city, category } = parsed.data
-  const results = await searchService.search(
-    q,
-    city,
-    category as Exclude<PlatformCategory, 'cabs'> | undefined,
-  )
+  const { q, city } = parsed.data
+  const results = await searchService.search(q, city)
 
   const response = NextResponse.json(results)
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)

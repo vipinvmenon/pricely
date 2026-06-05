@@ -1,13 +1,11 @@
 import { addPendingWatchlistItem } from '@/lib/hooks/usePendingWatchlist'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { fetchJson } from '@/lib/utils/fetchJson'
-import type { PlatformCategory } from '@/types'
-
 export type TrackProductPayload = {
   productId: string
   city: string
   title?: string
-  category?: PlatformCategory
+  category?: string
   subtitle?: string
   imageUrl?: string
 }

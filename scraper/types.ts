@@ -18,22 +18,6 @@ export interface ScraperResult {
 
 export type Scraper = (ctx: ScraperContext) => Promise<ScraperResult[]>
 
-export interface CabScraperContext {
-  from: string
-  to: string
-}
-
-export interface CabScraperResult {
-  platformId: string
-  price: number
-  eta: string
-  surgeMultiplier?: number
-  bookUrl: string
-  scrapedAt: string
-}
-
-export type CabScraper = (ctx: CabScraperContext) => Promise<CabScraperResult>
-
 export interface ScrapeError {
   platformId: string
   message: string

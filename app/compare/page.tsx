@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Suspense, useEffect, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR, { useSWRConfig } from "swr";
@@ -39,23 +39,124 @@ function SearchIcon() {
 	);
 }
 
-function CheckIcon() {
+function VerdictHero({
+	verdict,
+	lowest,
+}: {
+	verdict: { action: "buy" | "wait"; confidence: number; reason: string };
+	lowest: { price: number; name: string } | undefined;
+}) {
+	const isBuy = verdict.action === "buy";
+	const actionColor = isBuy ? "var(--accent)" : "var(--warn)";
+	const confidence =
+		verdict.confidence > 1
+			? Math.round(verdict.confidence)
+			: Math.round(verdict.confidence * 100);
+
 	return (
-		<svg
-			width="16"
-			height="16"
-			viewBox="0 0 16 16"
-			fill="none"
-			xmlns="http://www.w3.org/2000/svg"
+		<Glass
+			variant="plate"
+			style={{
+				padding: "var(--sp-8)",
+				marginBottom: 24,
+				borderRadius: "var(--r-xl)",
+				borderLeft: `3px solid ${actionColor}`,
+				background: isBuy
+					? "linear-gradient(135deg, rgba(29,185,84,0.06) 0%, transparent 60%)"
+					: "linear-gradient(135deg, rgba(255,192,98,0.05) 0%, transparent 60%)",
+			}}
 		>
-			<path
-				d="M3 8l3.5 3.5 6.5-7"
-				stroke="var(--accent)"
-				strokeWidth="1.75"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-		</svg>
+			<div
+				style={{
+					display: "flex",
+					alignItems: "flex-start",
+					justifyContent: "space-between",
+					gap: 24,
+					flexWrap: "wrap",
+				}}
+			>
+				<div>
+					<div
+						style={{
+							fontFamily: "var(--font-mono)",
+							fontSize: "0.6875rem",
+							letterSpacing: "0.12em",
+							textTransform: "uppercase",
+							color: "var(--text-faint)",
+							marginBottom: 12,
+						}}
+					>
+						Verdict · Price Intelligence
+					</div>
+					<div
+						className="mono"
+						style={{
+							fontSize: "clamp(2.25rem, 5vw, 3.25rem)",
+							fontWeight: 700,
+							color: actionColor,
+							lineHeight: 1,
+							letterSpacing: "-0.03em",
+							marginBottom: 16,
+						}}
+					>
+						{isBuy ? "BUY NOW." : "WAIT."}
+					</div>
+					<p
+						style={{
+							fontSize: "1rem",
+							color: "var(--text-dim)",
+							margin: 0,
+							lineHeight: 1.65,
+							maxWidth: 560,
+						}}
+					>
+						{verdict.reason}
+					</p>
+				</div>
+
+				<div
+					style={{
+						display: "flex",
+						flexDirection: "column",
+						alignItems: "flex-end",
+						gap: 12,
+						flexShrink: 0,
+					}}
+				>
+					{confidence > 0 && (
+						<Chip variant={isBuy ? "active" : "default"} size="sm">
+							{confidence}% confident
+						</Chip>
+					)}
+					{isBuy && lowest && (
+						<div style={{ textAlign: "right" }}>
+							<div
+								style={{
+									fontFamily: "var(--font-mono)",
+									fontSize: "0.6875rem",
+									letterSpacing: "0.08em",
+									textTransform: "uppercase",
+									color: "var(--text-faint)",
+									marginBottom: 6,
+								}}
+							>
+								Lowest now
+							</div>
+							<PriceBadge value={lowest.price} size="lg" />
+							<div
+								style={{
+									fontSize: "0.75rem",
+									color: "var(--text-dim)",
+									marginTop: 4,
+								}}
+							>
+								at {lowest.name}
+							</div>
+						</div>
+					)}
+				</div>
+			</div>
+		</Glass>
 	);
 }
 
@@ -73,16 +174,19 @@ function ComparePageContent() {
 	const activeQuery = paramQuery || DEFAULT_COMPARE_QUERY;
 
 	const [inputQuery, setInputQuery] = useState(activeQuery);
+	const [prevParamQuery, setPrevParamQuery] = useState(paramQuery);
 	const [showAll, setShowAll] = useState(false);
 	const [trackState, setTrackState] = useState<"idle" | "loading" | "done">(
 		"idle",
 	);
 	const [trackError, setTrackError] = useState<string | null>(null);
 
-	useEffect(() => {
-		setInputQuery(searchParams.get("q")?.trim() ?? DEFAULT_COMPARE_QUERY);
+	// Sync input when URL param changes (React's "adjust state on render" pattern)
+	if (paramQuery !== prevParamQuery) {
+		setPrevParamQuery(paramQuery);
+		setInputQuery(paramQuery || DEFAULT_COMPARE_QUERY);
 		setShowAll(false);
-	}, [searchParams]);
+	}
 
 	const {
 		data,
@@ -187,7 +291,7 @@ function ComparePageContent() {
 					}}
 				>
 					<span className="pulse-dot" />
-					Compare · 12 retailers · live
+					Price Intelligence · live
 				</div>
 
 				<h1
@@ -281,6 +385,10 @@ function ComparePageContent() {
 				<section
 					style={{ padding: "0 24px 60px", maxWidth: 1100, margin: "0 auto" }}
 				>
+					{verdict && (
+						<VerdictHero verdict={verdict} lowest={lowest} />
+					)}
+
 					<div
 						style={{
 							display: "grid",
@@ -367,36 +475,6 @@ function ComparePageContent() {
 									)}
 								</div>
 							</div>
-
-							{verdict && (
-								<Glass
-									variant="plate"
-									style={{
-										padding: "var(--sp-4)",
-										borderLeft: "2px solid var(--accent)",
-										borderRadius: "var(--r-md)",
-									}}
-								>
-									<div
-										style={{ display: "flex", gap: 10, alignItems: "flex-start" }}
-									>
-										<CheckIcon />
-										<p
-											style={{
-												fontSize: "0.875rem",
-												color: "var(--text-dim)",
-												margin: 0,
-												lineHeight: 1.5,
-											}}
-										>
-											<strong style={{ color: "var(--text)", fontWeight: 600 }}>
-												{verdict.action === "buy" ? "Buy now." : "Wait."}
-											</strong>{" "}
-											{verdict.reason}
-										</p>
-									</div>
-								</Glass>
-							)}
 
 							{trackError && (
 								<p
@@ -593,7 +671,7 @@ function ComparePageContent() {
 								}}
 							>
 								<span className="pulse-dot" />
-								Price history · 90 days
+								Price history · last 90 days
 							</div>
 
 							<h2
@@ -610,6 +688,12 @@ function ComparePageContent() {
 										Currently the{" "}
 										<span style={{ color: "var(--accent)" }}>lowest</span> in
 										recent months.
+									</>
+								) : verdict?.action === "wait" ? (
+									<>
+										It{"’"}s been{" "}
+										<span style={{ color: "var(--warn)" }}>cheaper before</span>.
+										Hold off.
 									</>
 								) : (
 									<>Price trend over the last 90 days.</>

@@ -10,7 +10,7 @@ const NAV_LINKS = [
 	{ label: "Home", href: "/" },
 	{ label: "Compare", href: "/compare" },
 	{ label: "Watchlist", href: "/watchlist" },
-	{ label: "Trips", href: "/cabs" },
+	{ label: "Alerts", href: "/alerts" },
 ];
 
 /** Avoid background RSC prefetches — first compile on D: drive can hang 30s+ */

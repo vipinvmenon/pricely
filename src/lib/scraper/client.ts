@@ -1,4 +1,4 @@
-import type { ScrapeRequest, ScrapeResponse, CabScrapeRequest, CabScrapeResponse } from '@/types'
+import type { ScrapeRequest, ScrapeResponse } from '@/types'
 
 const BASE   = process.env.SCRAPER_SERVICE_URL
 const SECRET = process.env.SCRAPER_SERVICE_SECRET
@@ -19,6 +19,5 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const scraperClient = {
-  scrape:     (req: ScrapeRequest)    => post<ScrapeResponse>('/scrape', req),
-  scrapeCabs: (req: CabScrapeRequest) => post<CabScrapeResponse>('/scrape/cabs', req),
+  scrape: (req: ScrapeRequest) => post<ScrapeResponse>('/scrape', req),
 }

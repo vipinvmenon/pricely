@@ -1,11 +1,4 @@
-export type PlatformCategory = 'grocery' | 'electronics' | 'cabs'
-
 export type PlatformId =
-  | 'blinkit'
-  | 'zepto'
-  | 'swiggy_instamart'
-  | 'bigbasket'
-  | 'dmart_ready'
   | 'amazon'
   | 'flipkart'
   | 'croma'
@@ -13,16 +6,6 @@ export type PlatformId =
   | 'vijay_sales'
   | 'tata_cliq'
   | 'myntra'
-  | 'blusmart'
-  | 'rapido'
-  | 'uber'
-  | 'ola'
-
-export type City = {
-  id: string
-  name: string
-  countryCode: 'IN'
-}
 
 export type Verdict = {
   action: 'buy' | 'wait'
@@ -33,7 +16,7 @@ export type Verdict = {
 export type PriceResult = {
   platformId: PlatformId
   platformName: string
-  category: PlatformCategory
+  category: string
   price: number
   mrp?: number
   etaText?: string
@@ -42,30 +25,6 @@ export type PriceResult = {
   url?: string
 }
 
-export type PriceHistoryPoint = {
-  productId: string
-  date: string
-  price: number
-  platformId: PlatformId
-}
-
-export type WatchlistItem = {
-  id: string
-  userId: string
-  productId: string
-  cityId: string
-  createdAt: string
-}
-
-export type WatchlistItemView = {
-  id: string
-  productId: string
-  title: string
-  category: PlatformCategory
-  subtitle?: string
-  deltaText?: string
-  hasAlert?: boolean
-}
 
 /* ── Compare API types ── */
 
@@ -117,32 +76,6 @@ export type WatchlistPageItem = {
   status: 'Just dropped' | 'Watching' | 'Holding' | 'Target hit'
 }
 
-/* ── Trips / Cabs types ── */
-
-export type FareResult = {
-  id: string
-  name: string
-  isLowest?: boolean
-  price: number
-  eta: string
-  surgeMultiplier?: number
-  bookUrl: string
-}
-
-export type FareHistoryPoint = {
-  label: string
-  blusmart: number
-  rapido: number
-  uber: number
-  ola: number
-}
-
-export type TripsResponse = {
-  fares: FareResult[]
-  fareHistory: FareHistoryPoint[]
-  errors?: ScrapeError[]
-}
-
 /* ── Scraper service types ── */
 
 export type ScrapeError = {
@@ -175,24 +108,17 @@ export type ScrapeResponse = {
   errors: ScrapeError[]
 }
 
-export type CabScrapeRequest = {
-  from: string
-  to: string
-  platforms: PlatformId[]
-}
+/* ── Alerts page types ── */
 
-export type CabScrapeResult = {
-  platformId: PlatformId
-  price: number
-  eta: string
-  surgeMultiplier?: number
-  bookUrl: string
-  scrapedAt: string
-}
-
-export type CabScrapeResponse = {
-  results: CabScrapeResult[]
-  errors: ScrapeError[]
+export type AlertPageItem = {
+  id: string
+  productId: string
+  productTitle: string
+  productSubtitle: string | null
+  targetPrice: number
+  isActive: boolean
+  createdAt: string
+  lastTriggeredAt: string | null
 }
 
 /* ── Trending search types ── */
@@ -200,5 +126,5 @@ export type CabScrapeResponse = {
 export type TrendingItem = {
   id: string
   query: string
-  category: PlatformCategory | 'electronics'
+  category: string
 }

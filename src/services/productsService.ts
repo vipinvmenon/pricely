@@ -1,10 +1,9 @@
 import { createServiceClient } from '@/lib/supabase/server'
-import type { PlatformCategory } from '@/types'
 
 export type UpsertProductInput = {
   id: string
   title: string
-  category: PlatformCategory
+  category: string
   subtitle?: string
   imageUrl?: string
 }

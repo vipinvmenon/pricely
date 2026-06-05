@@ -30,14 +30,8 @@ export async function getWatchlist(userId: string): Promise<WatchlistPageItem[]>
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
-  return mapToPageItems(
-    (data ?? []) as Array<{
-      id: string
-      product_id: string
-      city: string
-      products: { title: string; category: string; subtitle: string | null } | null
-    }>,
-  )
+  type Row = { id: string; product_id: string; city: string; products: { title: string; category: string; subtitle: string | null } | null }
+  return mapToPageItems((data ?? []) as unknown as Row[])
 }
 
 export async function addToWatchlist(

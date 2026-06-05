@@ -2,12 +2,9 @@ import { scraperClient } from '@/lib/scraper/client'
 import { cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
 import { PLATFORMS } from '@/lib/utils/platforms'
-import type { PriceResult, PlatformCategory, PlatformId, ScrapeResult } from '@/types'
+import type { PriceResult, PlatformId, ScrapeResult } from '@/types'
 
-const CATEGORY_PLATFORMS: Record<Exclude<PlatformCategory, 'cabs'>, PlatformId[]> = {
-  grocery:     ['blinkit', 'zepto', 'swiggy_instamart', 'bigbasket', 'dmart_ready'],
-  electronics: ['amazon', 'flipkart', 'croma', 'reliance_digital', 'vijay_sales', 'tata_cliq', 'myntra'],
-}
+const ALL_PLATFORMS: PlatformId[] = ['amazon', 'flipkart', 'croma', 'reliance_digital', 'vijay_sales', 'tata_cliq', 'myntra']
 
 const MOCK_SEARCH_RESULTS: PriceResult[] = [
   { platformId: 'amazon',   platformName: 'Amazon',   category: 'electronics', price: 23450, mrp: 29990, updatedAt: new Date().toISOString(), url: '#' },
@@ -24,7 +21,7 @@ function normaliseAndRank(raw: ScrapeResult[]): PriceResult[] {
       seen.set(key, {
         platformId:   r.platformId,
         platformName: PLATFORMS[r.platformId]?.name ?? String(r.platformId),
-        category:     PLATFORMS[r.platformId]?.category ?? 'electronics',
+        category:     'electronics',
         price:        r.price,
         mrp:          r.mrp,
         updatedAt:    r.scrapedAt,
@@ -38,7 +35,6 @@ function normaliseAndRank(raw: ScrapeResult[]): PriceResult[] {
 export async function search(
   query: string,
   city: string,
-  category?: Exclude<PlatformCategory, 'cabs'>,
 ): Promise<PriceResult[]> {
   if (!process.env.SCRAPER_SERVICE_URL) return MOCK_SEARCH_RESULTS
 
@@ -46,11 +42,7 @@ export async function search(
   const cached = await cacheGet<PriceResult[]>(cacheKey)
   if (cached) return cached
 
-  const platforms = category
-    ? CATEGORY_PLATFORMS[category]
-    : [...CATEGORY_PLATFORMS.grocery, ...CATEGORY_PLATFORMS.electronics]
-
-  const { results } = await scraperClient.scrape({ query, platforms, city, maxResults: 3 })
+  const { results } = await scraperClient.scrape({ query, platforms: ALL_PLATFORMS, city, maxResults: 3 })
   const ranked = normaliseAndRank(results)
 
   await cacheSetex(cacheKey, TTL.search, ranked)

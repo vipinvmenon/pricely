@@ -1,13 +1,5 @@
 create extension if not exists pgcrypto;
 
--- Enums
-do $$
-begin
-  if not exists (select 1 from pg_type where typname = 'product_category') then
-    create type public.product_category as enum ('grocery', 'electronics', 'cabs');
-  end if;
-end $$;
-
 -- user_profiles
 create table if not exists public.user_profiles (
   user_id      uuid        primary key references auth.users(id) on delete cascade,
@@ -21,7 +13,7 @@ create table if not exists public.user_profiles (
 create table if not exists public.products (
   id          text        primary key,
   title       text        not null,
-  category    public.product_category not null,
+  category    text        not null default 'electronics',
   subtitle    text,
   image_url   text,
   created_at  timestamptz not null default now(),

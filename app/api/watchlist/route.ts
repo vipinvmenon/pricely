@@ -37,7 +37,7 @@ const PostBodySchema = z.object({
   productId: z.string().min(1),
   city:      z.string().min(1).default('mumbai'),
   title:     z.string().min(1).optional(),
-  category:  z.enum(['grocery', 'electronics', 'cabs']).optional(),
+  category:  z.string().optional(),
   subtitle:  z.string().optional(),
   imageUrl:  z.string().optional(),
 })

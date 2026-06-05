@@ -1,0 +1,5 @@
+{
+    "files.autoSave": "onWindowChange",
+    "workbench.secondarySideBar.showLabels": true,
+    "workbench.activityBar.orientation": "vertical"
+}

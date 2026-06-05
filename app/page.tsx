@@ -1,584 +1,934 @@
 "use client";
 
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
 import { Nav } from "@/components/ui/Nav";
 import { Glass } from "@/components/ui/Glass";
-import { Button } from "@/components/ui/Button";
-import { Chip } from "@/components/ui/Chip";
-import { DEFAULT_CITY } from "@/lib/constants";
+import { useSupabaseUser } from "@/lib/hooks/useSupabaseUser";
 import { fetchJson } from "@/lib/utils/fetchJson";
 import { formatINR } from "@/lib/utils/format";
-import type { TrendingItem } from "@/types";
+import { normalizeQuery } from "@/lib/utils/format";
+import type { WatchlistPageItem } from "@/types";
 
-const WATCHLIST_PREVIEW = [
-	{ name: "Sony WH-1000XM5", retailer: "Amazon", price: 23450, save: 6540 },
-	{
-		name: 'Apple iPad Air 11"',
-		retailer: "Flipkart",
-		price: 58999,
-		save: 5901,
-	},
-	{
-		name: "Dyson V12 Detect Slim",
-		retailer: "Amazon",
-		price: 44990,
-		save: 7910,
-	},
-	{ name: "Asics Novablast 4", retailer: "Flipkart", price: 8249, save: 4750 },
-];
-
-function TrackIllustration() {
+function SearchIcon() {
 	return (
-		<svg
-			viewBox="0 0 160 80"
-			fill="none"
-			xmlns="http://www.w3.org/2000/svg"
-			style={{ width: "100%", height: 80 }}
-		>
-			<polyline
-				points="0,60 20,50 40,55 60,35 80,45 100,25 120,30 140,15 160,20"
-				stroke="var(--accent)"
-				strokeWidth="2"
-				strokeLinejoin="round"
-				strokeLinecap="round"
-				fill="none"
-				opacity="0.8"
-			/>
-			<circle cx="160" cy="20" r="4" fill="var(--accent)" />
+		<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+			<circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5" />
+			<path d="M13 13l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
 		</svg>
 	);
 }
 
-function CompareIllustration() {
-	const bars = [
-		{ height: 50, accent: false },
-		{ height: 70, accent: false },
-		{ height: 90, accent: true },
-		{ height: 60, accent: false },
-		{ height: 80, accent: false },
-		{ height: 45, accent: false },
-		{ height: 65, accent: false },
-	];
+function SearchBar({
+	value,
+	onChange,
+	onSubmit,
+	placeholder = "Search any product…",
+	big = false,
+}: {
+	value: string;
+	onChange: (v: string) => void;
+	onSubmit: (e: FormEvent) => void;
+	placeholder?: string;
+	big?: boolean;
+}) {
 	return (
-		<svg
-			viewBox="0 0 160 80"
-			fill="none"
-			xmlns="http://www.w3.org/2000/svg"
-			style={{ width: "100%", height: 80 }}
-		>
-			{bars.map((b, i) => (
-				<rect
-					key={i}
-					x={i * 22 + 4}
-					y={80 - b.height}
-					width={16}
-					height={b.height}
-					rx="3"
-					fill={b.accent ? "var(--accent)" : "rgba(255,255,255,0.12)"}
-				/>
-			))}
-		</svg>
-	);
-}
-
-function ForecastIllustration() {
-	return (
-		<svg
-			viewBox="0 0 160 80"
-			fill="none"
-			xmlns="http://www.w3.org/2000/svg"
-			style={{ width: "100%", height: 80 }}
-		>
-			<polyline
-				points="0,60 30,55 60,45 90,40 110,38"
-				stroke="var(--accent)"
-				strokeWidth="2"
-				strokeLinejoin="round"
-				fill="none"
-			/>
-			<polyline
-				points="110,38 140,28 160,22"
-				stroke="var(--accent)"
-				strokeWidth="2"
-				strokeLinejoin="round"
-				strokeDasharray="4 3"
-				fill="none"
-				opacity="0.5"
-			/>
-			<line
-				x1="110"
-				y1="0"
-				x2="110"
-				y2="80"
-				stroke="rgba(255,255,255,0.12)"
-				strokeWidth="1"
-				strokeDasharray="3 3"
-			/>
-			<text
-				x="104"
-				y="74"
+		<form onSubmit={onSubmit}>
+			<Glass
+				variant="plate"
 				style={{
-					fontFamily: "var(--font-mono)",
-					fontSize: 8,
-					fill: "var(--accent)",
-				}}
-			>
-				NOW
-			</text>
-			<text
-				x="144"
-				y="18"
-				style={{
-					fontFamily: "var(--font-mono)",
-					fontSize: 8,
-					fill: "rgba(255,255,255,0.4)",
-				}}
-			>
-				+30d
-			</text>
-		</svg>
-	);
-}
-
-const HOW_IT_WORKS = [
-	{
-		label: "01 / Track",
-		heading: "Add anything to your watchlist",
-		body: "Search for any product and set your target price. Pricely monitors it in real time across 12 retailers.",
-		visual: <TrackIllustration />,
-	},
-	{
-		label: "02 / Compare",
-		heading: "See every retailer at once",
-		body: "Side-by-side price tables updated every 5 minutes. Delivery, returns, stock status — all visible instantly.",
-		visual: <CompareIllustration />,
-	},
-	{
-		label: "03 / Save",
-		heading: "Buy when the model says buy",
-		body: "Our price model analyses 12 months of history and tells you whether to buy now or wait for a better drop.",
-		visual: <ForecastIllustration />,
-	},
-];
-
-const SALE_CALENDAR = [
-	{ name: "Amazon Sale", dates: "12–14", color: "var(--accent)" },
-	{ name: "Flipkart BBD", dates: "25–27", color: "#4F8EF7" },
-];
-
-export default function HomePage() {
-	const { data: trending, isLoading: trendingLoading } = useSWR<TrendingItem[]>(
-		`/api/trending?city=${encodeURIComponent(DEFAULT_CITY)}`,
-		(url: string) => fetchJson<TrendingItem[]>(url),
-	);
-
-	return (
-		<div style={{ minHeight: "100vh", background: "var(--bg0)" }}>
-			<Nav />
-
-			{/* Hero section */}
-			<section
-				style={{
-					position: "relative",
-					minHeight: "90vh",
 					display: "flex",
 					alignItems: "center",
-					padding: "80px 24px 60px",
-					overflow: "hidden",
+					borderRadius: "var(--r-pill)",
+					padding: `0 8px 0 18px`,
+					gap: 8,
 				}}
 			>
-				<div
-					aria-hidden
+				<span style={{ color: "var(--text-faint)", flexShrink: 0 }}>
+					<SearchIcon />
+				</span>
+				<input
+					type="text"
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					placeholder={placeholder}
+					autoComplete="off"
 					style={{
-						position: "absolute",
-						inset: 0,
-						background:
-							"radial-gradient(ellipse 60% 40% at 20% 50%, rgba(30,215,96,0.07) 0%, transparent 70%)",
-						pointerEvents: "none",
+						flex: 1,
+						background: "none",
+						border: "none",
+						outline: "none",
+						color: "var(--text)",
+						fontSize: big ? "1.0625rem" : "1rem",
+						fontFamily: "inherit",
+						padding: big ? "18px 4px" : "14px 4px",
 					}}
 				/>
+				<button
+					type="submit"
+					style={{
+						flexShrink: 0,
+						background: "var(--accent)",
+						border: "none",
+						borderRadius: "var(--r-pill)",
+						color: "#0A0A0B",
+						fontSize: "0.875rem",
+						fontWeight: 700,
+						fontFamily: "inherit",
+						padding: big ? "11px 22px" : "9px 18px",
+						cursor: "pointer",
+					}}
+				>
+					Search
+				</button>
+			</Glass>
+		</form>
+	);
+}
 
+// ── First-visit hero ──────────────────────────────────────────────────────────
+
+const TRENDING_CHIPS = [
+	"iPhone 16",
+	"Sony WH-1000XM5",
+	"Nike Pegasus 41",
+	"MacBook Air M3",
+	"Dyson V12",
+];
+
+const STATS = [
+	{ value: "₹2.4Cr", label: "Saved for shoppers this year" },
+	{ value: "40K+", label: "Products tracked daily" },
+	{ value: "92%", label: "Of buy-calls beat waiting" },
+];
+
+const HOW_STEPS = [
+	{
+		n: "01",
+		title: "Track",
+		body: "Add anything you want to buy. Pricely starts watching every retailer that sells it.",
+	},
+	{
+		n: "02",
+		title: "Watch",
+		body: "We log the price every day and learn its pattern — sale cycles, drops and restocks.",
+	},
+	{
+		n: "03",
+		title: "Decide",
+		body: "When the price is genuinely good, we tell you. Buy now, or wait — always with the reason.",
+	},
+];
+
+function HomeFirstVisit({
+	query,
+	setQuery,
+	onSearch,
+	onChip,
+}: {
+	query: string;
+	setQuery: (q: string) => void;
+	onSearch: (e: FormEvent) => void;
+	onChip: (q: string) => void;
+}) {
+	return (
+		<div
+			className="home-inner"
+			style={{ maxWidth: 1180, margin: "0 auto", padding: "36px 40px 56px" }}
+		>
+			{/* Eyebrow */}
+			<div
+				style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 20 }}
+			>
+				<span
+					style={{ position: "relative", width: 7, height: 7, display: "inline-block" }}
+				>
+					<span
+						style={{
+							position: "absolute",
+							inset: 0,
+							borderRadius: 4,
+							background: "var(--accent)",
+							display: "block",
+						}}
+					/>
+					<span className="pulse-dot-ring" />
+				</span>
+				<span
+					style={{
+						fontFamily: "var(--font-mono)",
+						fontSize: 10.5,
+						color: "var(--text-dim)",
+						letterSpacing: "0.06em",
+					}}
+				>
+					PRICE INTELLIGENCE
+				</span>
+			</div>
+
+			{/* Headline */}
+			<h1
+				style={{
+					fontSize: "clamp(2.75rem, 5.5vw, 4rem)",
+					lineHeight: 0.97,
+					letterSpacing: "-0.035em",
+					fontWeight: 500,
+					color: "var(--text)",
+					margin: 0,
+					maxWidth: 880,
+				}}
+			>
+				Never{" "}
+				<em style={{ fontStyle: "normal", color: "var(--accent)", fontWeight: 500 }}>
+					overpay
+				</em>{" "}
+				again.
+			</h1>
+			<p
+				style={{
+					fontSize: 17,
+					lineHeight: 1.55,
+					color: "var(--text-dim)",
+					margin: "20px 0 0",
+					maxWidth: 620,
+					letterSpacing: "-0.005em",
+				}}
+			>
+				Pricely watches the price of anything you want to buy — across Amazon, Flipkart,
+				Myntra, Croma and more — and tells you the one thing that matters:{" "}
+				<strong style={{ color: "var(--text)", fontWeight: 600 }}>
+					buy now, or wait.
+				</strong>
+			</p>
+
+			{/* Search + chips */}
+			<div style={{ marginTop: 32, maxWidth: 760 }}>
+				<SearchBar
+					value={query}
+					onChange={setQuery}
+					onSubmit={onSearch}
+					placeholder="Search any product…"
+					big
+				/>
 				<div
 					style={{
-						maxWidth: 1200,
-						margin: "0 auto",
-						width: "100%",
-						display: "grid",
-						gridTemplateColumns: "1fr 1fr",
-						gap: "80px",
+						marginTop: 14,
+						display: "flex",
+						gap: 7,
+						flexWrap: "wrap",
 						alignItems: "center",
-						position: "relative",
-						zIndex: 1,
 					}}
-					className="hero-grid"
 				>
-					{/* Left — headline */}
-					<div>
-						<div style={{ marginBottom: 32 }}>
-							<Chip variant="active" withDot size="sm">
-								Live across 12 Indian retailers
-							</Chip>
-						</div>
-
-						<h1
-							className="hero-headline"
+					<span
+						style={{
+							fontFamily: "var(--font-mono)",
+							fontSize: 10.5,
+							color: "var(--text-faint)",
+							marginRight: 2,
+						}}
+					>
+						TRY
+					</span>
+					{TRENDING_CHIPS.map((s) => (
+						<button
+							key={s}
+							onClick={() => onChip(s)}
 							style={{
-								fontSize: "clamp(4rem, 8vw, 6rem)",
-								fontWeight: 500,
-								lineHeight: 0.92,
-								letterSpacing: "-0.04em",
-								color: "var(--text)",
-								margin: "0 0 40px",
-							}}
-						>
-							Never
-							<br />
-							<span style={{ color: "var(--accent)" }}>overpay</span>
-							<br />
-							again.
-						</h1>
-
-						<div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-							<Link href="/compare" style={{ textDecoration: "none" }}>
-								<Button variant="primary" size="lg" type="button">
-									Track a product
-								</Button>
-							</Link>
-							<a href="#how-it-works" style={{ textDecoration: "none" }}>
-								<Button variant="ghost" size="lg" type="button">
-									How it works →
-								</Button>
-							</a>
-						</div>
-
-						{(trendingLoading || (trending && trending.length > 0)) && (
-							<div style={{ marginTop: 28 }}>
-								<div
-									style={{
-										fontSize: "0.75rem",
-										fontFamily: "var(--font-mono)",
-										color: "var(--text-faint)",
-										letterSpacing: "0.08em",
-										textTransform: "uppercase",
-										marginBottom: 12,
-									}}
-								>
-									Trending now
-								</div>
-								<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-									{trendingLoading
-										? null
-										: trending?.map((item) => (
-												<Link
-													key={item.id}
-													href={`/compare?q=${encodeURIComponent(item.query)}`}
-													style={{ textDecoration: "none" }}
-												>
-													<Chip variant="default" size="sm">
-														{item.query}
-													</Chip>
-												</Link>
-											))}
-								</div>
-							</div>
-						)}
-					</div>
-
-					{/* Right — stats */}
-					<div>
-						<p
-							style={{
-								fontSize: "1.125rem",
+								padding: "6px 13px",
+								borderRadius: "var(--r-pill)",
+								border: "1px solid var(--glass-plate-border)",
+								background: "var(--glass-plate-bg)",
 								color: "var(--text-dim)",
-								lineHeight: 1.65,
-								marginBottom: 40,
+								fontSize: "0.8125rem",
+								fontWeight: 500,
+								fontFamily: "inherit",
+								cursor: "pointer",
 							}}
 						>
-							Pricely watches prices across Blinkit, Zepto, Amazon, Flipkart,
-							Croma and 7 more — so you never have to open 12 tabs again. Set a
-							target, get alerted, save money.
-						</p>
+							{s}
+						</button>
+					))}
+				</div>
+			</div>
 
+			{/* Trust stats */}
+			<div
+				style={{
+					display: "flex",
+					gap: 52,
+					marginTop: 48,
+					flexWrap: "wrap",
+				}}
+			>
+				{STATS.map((s) => (
+					<div key={s.value}>
 						<div
 							style={{
-								display: "grid",
-								gridTemplateColumns: "repeat(3, 1fr)",
-								gap: 24,
+								fontSize: "clamp(1.875rem, 3vw, 2.25rem)",
+								fontWeight: 600,
+								letterSpacing: "-0.045em",
+								color: "var(--text)",
+								lineHeight: 1,
 							}}
 						>
-							{[
-								{ value: "₹14.2L", label: "Saved this month" },
-								{ value: "2.1M", label: "Prices tracked daily" },
-								{ value: "9.4×", label: "Faster than manual" },
-							].map((stat) => (
-								<div key={stat.label}>
-									<div
-										className="mono"
-										style={{
-											fontSize: "1.75rem",
-											fontWeight: 600,
-											color: "var(--text)",
-											lineHeight: 1.1,
-											marginBottom: 4,
-										}}
-									>
-										{stat.value}
-									</div>
-									<div
-										style={{ fontSize: "0.8125rem", color: "var(--text-dim)" }}
-									>
-										{stat.label}
-									</div>
-								</div>
-							))}
+							{s.value}
+						</div>
+						<div
+							style={{
+								fontSize: 12.5,
+								color: "var(--text-faint)",
+								marginTop: 8,
+								maxWidth: 160,
+								lineHeight: 1.4,
+							}}
+						>
+							{s.label}
 						</div>
 					</div>
-				</div>
-			</section>
+				))}
+			</div>
 
 			{/* How it works */}
-			<section
-				id="how-it-works"
-				style={{ padding: "0 24px 100px", maxWidth: 1200, margin: "0 auto" }}
-			>
+			<div style={{ marginTop: 56 }}>
 				<div
 					style={{
-						display: "grid",
-						gridTemplateColumns: "repeat(3, 1fr)",
-						gap: 20,
+						fontFamily: "var(--font-mono)",
+						fontSize: 11,
+						color: "var(--text-dim)",
+						letterSpacing: "0.08em",
+						textTransform: "uppercase",
+						marginBottom: 20,
 					}}
+				>
+					How Pricely works
+				</div>
+				<div
+					style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}
 					className="how-grid"
 				>
-					{HOW_IT_WORKS.map((card) => (
+					{HOW_STEPS.map((s) => (
 						<Glass
-							key={card.label}
+							key={s.n}
 							variant="plate"
-							style={{ padding: "var(--sp-8)" }}
+							style={{
+								borderRadius: "var(--r-xl)",
+								padding: 28,
+								minHeight: 180,
+								display: "flex",
+								flexDirection: "column",
+							}}
 						>
-							<div
+							<span
 								style={{
 									fontFamily: "var(--font-mono)",
-									fontSize: "0.6875rem",
-									fontWeight: 700,
-									letterSpacing: "0.12em",
-									textTransform: "uppercase",
+									fontSize: 12,
 									color: "var(--accent)",
-									marginBottom: "var(--sp-4)",
+									letterSpacing: "0.1em",
 								}}
 							>
-								{card.label}
-							</div>
-							<div style={{ marginBottom: "var(--sp-4)" }}>{card.visual}</div>
+								{s.n}
+							</span>
 							<h3
 								style={{
-									fontSize: "1.125rem",
-									fontWeight: 600,
+									fontSize: "clamp(1.25rem, 2vw, 1.625rem)",
+									fontWeight: 500,
+									letterSpacing: "-0.03em",
 									color: "var(--text)",
-									margin: "0 0 12px",
-									lineHeight: 1.3,
+									margin: "20px 0 0",
 								}}
 							>
-								{card.heading}
+								{s.title}
 							</h3>
 							<p
 								style={{
-									fontSize: "0.9rem",
+									fontSize: 13.5,
+									lineHeight: 1.55,
 									color: "var(--text-dim)",
-									lineHeight: 1.65,
-									margin: 0,
+									margin: "10px 0 0",
+									flex: 1,
 								}}
 							>
-								{card.body}
+								{s.body}
 							</p>
 						</Glass>
 					))}
 				</div>
-			</section>
+			</div>
+		</div>
+	);
+}
 
-			{/* "What it feels like" editorial section */}
-			<section
-				style={{ padding: "0 24px 100px", maxWidth: 1200, margin: "0 auto" }}
-			>
-				<h2
-					style={{
-						fontSize: "clamp(1.75rem, 4vw, 3rem)",
-						fontWeight: 500,
-						lineHeight: 1.15,
-						letterSpacing: "-0.02em",
-						color: "var(--text)",
-						marginBottom: 48,
-						maxWidth: 700,
-					}}
-				>
-					A quiet assistant that does the haggling —
-					<br />
-					<span style={{ color: "var(--accent)" }}>actually saving.</span>
-				</h2>
+// ── Returning-user feed ───────────────────────────────────────────────────────
 
+interface ChangeItem {
+	tone: "good" | "hit" | "wait" | "soon";
+	head: string;
+	sub: string;
+	price: number;
+	deltaPct: number;
+	tag: string;
+	name: string;
+}
+
+function ChangeRow({
+	item,
+	onNavigate,
+}: {
+	item: ChangeItem;
+	onNavigate: (q: string) => void;
+}) {
+	const toneColor =
+		item.tone === "good" || item.tone === "hit"
+			? "var(--accent)"
+			: item.tone === "wait"
+				? "var(--warn)"
+				: "var(--text-dim)";
+	const isGood = item.tone === "good" || item.tone === "hit";
+
+	return (
+		<div
+			onClick={() => onNavigate(item.name)}
+			style={{
+				display: "grid",
+				gridTemplateColumns: "12px 1fr auto",
+				gap: 18,
+				alignItems: "center",
+				padding: "20px 4px",
+				borderBottom: "1px solid var(--glass-plate-border)",
+				cursor: "pointer",
+			}}
+		>
+			<span
+				style={{
+					width: 10,
+					height: 10,
+					borderRadius: "50%",
+					background: toneColor,
+					display: "block",
+					marginTop: 3,
+					flexShrink: 0,
+				}}
+			/>
+			<div style={{ minWidth: 0 }}>
 				<div
 					style={{
-						display: "grid",
-						gridTemplateColumns: "1fr 1fr",
-						gap: 20,
+						display: "flex",
+						alignItems: "center",
+						gap: 10,
+						marginBottom: 6,
 					}}
-					className="editorial-grid"
 				>
-					{/* Watchlist preview card */}
-					<Glass variant="plate" style={{ padding: "var(--sp-6)" }}>
+					<span
+						style={{
+							fontFamily: "var(--font-mono)",
+							fontSize: 10,
+							color: toneColor,
+							letterSpacing: "0.04em",
+							padding: "3px 8px",
+							borderRadius: "var(--r-pill)",
+							background: "var(--glass-plate-bg)",
+							border: "1px solid var(--glass-plate-border)",
+						}}
+					>
+						{item.tag.toUpperCase()}
+					</span>
+				</div>
+				<div
+					style={{
+						fontSize: 17,
+						fontWeight: 500,
+						color: "var(--text)",
+						letterSpacing: "-0.02em",
+						lineHeight: 1.25,
+					}}
+				>
+					{item.head}
+				</div>
+				{item.sub && (
+					<div
+						style={{
+							fontSize: 12.5,
+							color: "var(--text-faint)",
+							marginTop: 5,
+							lineHeight: 1.45,
+						}}
+					>
+						{item.sub}
+					</div>
+				)}
+			</div>
+			<div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+				<div style={{ textAlign: "right" }}>
+					<div
+						style={{
+							fontFamily: "var(--font-mono)",
+							fontSize: 15,
+							fontWeight: 600,
+							color: "var(--text)",
+						}}
+					>
+						{formatINR(item.price)}
+					</div>
+					{item.deltaPct !== 0 && (
 						<div
 							style={{
-								fontSize: "0.8125rem",
-								fontWeight: 600,
-								color: "var(--text-dim)",
-								marginBottom: 20,
-								display: "flex",
-								alignItems: "center",
-								gap: 6,
+								fontFamily: "var(--font-mono)",
+								fontSize: 11.5,
+								color: isGood ? "var(--accent)" : "var(--text-faint)",
+								marginTop: 3,
 							}}
 						>
-							<span className="pulse-dot" />
-							Your watchlist · 4 active
+							{item.deltaPct > 0 ? "+" : ""}
+							{item.deltaPct}%
 						</div>
-						<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-							{WATCHLIST_PREVIEW.map((item) => (
-								<div
-									key={item.name}
+					)}
+				</div>
+				<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+					<path
+						d="M6 4l4 4-4 4"
+						stroke="var(--text-faint)"
+						strokeWidth="1.5"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					/>
+				</svg>
+			</div>
+		</div>
+	);
+}
+
+function HomeReturning({
+	user,
+	query,
+	setQuery,
+	onSearch,
+	onNavigate,
+	watchlistItems,
+}: {
+	user: { email?: string; user_metadata?: { full_name?: string } } | null;
+	query: string;
+	setQuery: (q: string) => void;
+	onSearch: (e: FormEvent) => void;
+	onNavigate: (q: string) => void;
+	watchlistItems: WatchlistPageItem[];
+}) {
+	const hour = new Date().getHours();
+	const greeting =
+		hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+	const firstName =
+		user?.user_metadata?.full_name?.split(" ")[0] ??
+		user?.email?.split("@")[0] ??
+		"";
+
+	// Derive changes from watchlist items with price movement
+	const changes: ChangeItem[] = watchlistItems
+		.filter((item) => {
+			const oldest = item.trend[0] ?? item.now;
+			return Math.abs(item.now - oldest) > 0 || item.status !== "Watching";
+		})
+		.slice(0, 5)
+		.map((item) => {
+			const oldest = item.trend[0] ?? item.now;
+			const delta = item.now - oldest;
+			const deltaPct = oldest > 0 ? Math.round((delta / oldest) * 100) : 0;
+			const tone: ChangeItem["tone"] =
+				item.status === "Target hit"
+					? "hit"
+					: item.status === "Just dropped"
+						? "good"
+						: item.status === "Holding"
+							? "wait"
+							: "soon";
+			const head =
+				item.status === "Target hit"
+					? `${item.name} hit your target price`
+					: delta < 0
+						? `${item.name} dropped ${formatINR(Math.abs(delta))}`
+						: delta > 0
+							? `${item.name} is up ${formatINR(Math.abs(delta))}`
+							: `${item.name} is holding steady`;
+			const tag =
+				item.status === "Target hit" || item.status === "Just dropped"
+					? "Buy now"
+					: item.status === "Holding"
+						? "Hold"
+						: "Watching";
+			return { tone, head, sub: item.subtitle, price: item.now, deltaPct, tag, name: item.name };
+		});
+
+	const actionable = changes.filter((c) => c.tag === "Buy now").length;
+
+	const totalSaved = watchlistItems.reduce((sum, item) => {
+		const oldest = item.trend[0] ?? item.now;
+		return sum + Math.max(0, oldest - item.now);
+	}, 0);
+
+	return (
+		<div
+			className="home-inner"
+			style={{ maxWidth: 1180, margin: "0 auto", padding: "36px 40px 56px" }}
+		>
+			{/* Greeting */}
+			<div style={{ marginBottom: 24 }}>
+				<h1
+					style={{
+						fontSize: "clamp(1.625rem, 3vw, 2.125rem)",
+						lineHeight: 1.06,
+						letterSpacing: "-0.035em",
+						fontWeight: 600,
+						color: "var(--text)",
+						margin: 0,
+					}}
+				>
+					{greeting}
+					{firstName ? `, ${firstName}` : ""}.
+				</h1>
+				<p
+					style={{
+						fontSize: 14.5,
+						color: "var(--text-dim)",
+						margin: "10px 0 0",
+						letterSpacing: "-0.005em",
+						lineHeight: 1.5,
+					}}
+				>
+					{actionable > 0 ? (
+						<>
+							Mostly quiet today.{" "}
+							<strong style={{ color: "var(--accent)", fontWeight: 600 }}>
+								{actionable} {actionable === 1 ? "is" : "are"} worth acting on
+							</strong>
+							.
+						</>
+					) : (
+						"Everything you're watching is holding steady."
+					)}
+				</p>
+			</div>
+
+			{/* Search — always present for returning users */}
+			<div style={{ maxWidth: 760, marginBottom: 34 }}>
+				<SearchBar
+					value={query}
+					onChange={setQuery}
+					onSubmit={onSearch}
+					placeholder="Search to add or compare…"
+				/>
+			</div>
+
+			{/* Feed + sidebar */}
+			<div
+				style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 28, alignItems: "start" }}
+				className="returning-grid"
+			>
+				{/* What changed feed */}
+				<div>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "space-between",
+							marginBottom: 12,
+						}}
+					>
+						<span
+							style={{
+								fontFamily: "var(--font-mono)",
+								fontSize: 11,
+								color: "var(--text-dim)",
+								letterSpacing: "0.08em",
+								textTransform: "uppercase",
+							}}
+						>
+							What changed
+						</span>
+						<span style={{ fontSize: 12, color: "var(--text-faint)" }}>
+							Last 7 days · {changes.length} update{changes.length !== 1 ? "s" : ""}
+						</span>
+					</div>
+					<div style={{ borderTop: "1px solid var(--glass-plate-border)" }}>
+						{changes.length > 0 ? (
+							changes.map((c, i) => (
+								<ChangeRow key={i} item={c} onNavigate={onNavigate} />
+							))
+						) : (
+							<div
+								style={{
+									padding: "32px 0",
+									color: "var(--text-faint)",
+									fontSize: 14,
+									lineHeight: 1.5,
+								}}
+							>
+								Everything you track is holding steady. We&apos;ll surface anything the moment
+								it moves — no noise until then.
+							</div>
+						)}
+					</div>
+					{changes.length > 0 && (
+						<p
+							style={{
+								marginTop: 22,
+								fontSize: 13,
+								color: "var(--text-faint)",
+								lineHeight: 1.5,
+							}}
+						>
+							Everything else you track is holding steady. We&apos;ll surface anything the
+							moment it moves — no noise until then.
+						</p>
+					)}
+					<div style={{ marginTop: 16 }}>
+						<Link
+							href="/watchlist"
+							style={{
+								fontSize: "0.8125rem",
+								color: "var(--accent)",
+								fontWeight: 600,
+								textDecoration: "none",
+							}}
+						>
+							See all watchlist →
+						</Link>
+					</div>
+				</div>
+
+				{/* Sidebar */}
+				<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+					{/* Savings card */}
+					{totalSaved > 100 && (
+						<Glass
+							variant="plate"
+							style={{ borderRadius: "var(--r-lg)", padding: 22 }}
+						>
+							<div
+								style={{
+									fontFamily: "var(--font-mono)",
+									fontSize: 10.5,
+									color: "var(--text-dim)",
+									letterSpacing: "0.08em",
+									textTransform: "uppercase",
+									marginBottom: 16,
+								}}
+							>
+								Saved with Pricely
+							</div>
+							<div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+								<span
 									style={{
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "space-between",
-										gap: 12,
+										fontFamily: "var(--font-mono)",
+										fontSize: 28,
+										fontWeight: 600,
+										letterSpacing: "-0.03em",
+										color: "var(--text)",
 									}}
 								>
-									<div>
+									{formatINR(totalSaved)}
+								</span>
+								<span style={{ fontSize: 12.5, color: "var(--text-dim)" }}>
+									since you started watching
+								</span>
+							</div>
+							<div
+								style={{ marginTop: 12, fontSize: 12.5, color: "var(--text-faint)" }}
+							>
+								Watching {watchlistItems.length} product
+								{watchlistItems.length !== 1 ? "s" : ""}.
+							</div>
+						</Glass>
+					)}
+
+					{/* You're watching list */}
+					<Glass
+						variant="plate"
+						style={{ borderRadius: "var(--r-lg)", padding: "8px 0" }}
+					>
+						<div
+							style={{
+								fontFamily: "var(--font-mono)",
+								fontSize: 10.5,
+								color: "var(--text-dim)",
+								letterSpacing: "0.08em",
+								textTransform: "uppercase",
+								padding: "10px 18px 8px",
+							}}
+						>
+							You&apos;re watching
+						</div>
+						{watchlistItems.slice(0, 4).map((item, i) => {
+							const isActionable =
+								item.status === "Just dropped" || item.status === "Target hit";
+							return (
+								<button
+									key={item.id}
+									onClick={() => onNavigate(item.name)}
+									style={{
+										width: "100%",
+										display: "flex",
+										alignItems: "center",
+										gap: 12,
+										padding: "11px 18px",
+										background: "none",
+										border: "none",
+										borderTop:
+											i > 0 ? "1px solid var(--glass-plate-border)" : "none",
+										cursor: "pointer",
+										textAlign: "left",
+									}}
+								>
+									<div
+										style={{
+											width: 32,
+											height: 32,
+											borderRadius: 8,
+											background: "var(--bg3)",
+											border: "1px solid var(--glass-plate-border)",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											fontFamily: "var(--font-mono)",
+											fontSize: 10,
+											fontWeight: 600,
+											color: "var(--text-dim)",
+											flexShrink: 0,
+										}}
+									>
+										{item.initials}
+									</div>
+									<div style={{ flex: 1, minWidth: 0 }}>
 										<div
 											style={{
-												fontSize: "0.875rem",
+												fontSize: 13,
 												fontWeight: 500,
 												color: "var(--text)",
+												overflow: "hidden",
+												textOverflow: "ellipsis",
+												whiteSpace: "nowrap",
 											}}
 										>
 											{item.name}
 										</div>
 										<div
 											style={{
-												fontSize: "0.75rem",
-												color: "var(--text-faint)",
+												fontFamily: "var(--font-mono)",
+												fontSize: 11,
+												color: isActionable ? "var(--accent)" : "var(--text-faint)",
+												marginTop: 2,
 											}}
 										>
-											{item.retailer}
+											{item.status}
 										</div>
 									</div>
-									<div style={{ textAlign: "right", flexShrink: 0 }}>
-										<div
-											className="mono"
-											style={{
-												fontSize: "0.9375rem",
-												fontWeight: 600,
-												color: "var(--text)",
-											}}
-										>
-											{formatINR(item.price)}
-										</div>
-										<div style={{ fontSize: "0.75rem", color: "var(--save)" }}>
-											Save {formatINR(item.save)}
-										</div>
-									</div>
-								</div>
-							))}
-						</div>
-					</Glass>
-
-					{/* Sale calendar card */}
-					<Glass variant="plate" style={{ padding: "var(--sp-6)" }}>
-						<div
-							style={{
-								fontSize: "0.8125rem",
-								fontWeight: 600,
-								color: "var(--text-dim)",
-								marginBottom: 20,
-							}}
-						>
-							Sale calendar · next 30 days
-						</div>
-						<div
-							style={{
-								display: "grid",
-								gridTemplateColumns: "repeat(7, 1fr)",
-								gap: 4,
-							}}
-						>
-							{Array.from({ length: 30 }, (_, i) => {
-								const day = i + 1;
-								const amazon = day >= 12 && day <= 14;
-								const flipkart = day >= 25 && day <= 27;
-								return (
-									<div
-										key={day}
+									<span
 										style={{
-											aspectRatio: "1",
-											borderRadius: "var(--r-xs)",
-											display: "flex",
-											alignItems: "center",
-											justifyContent: "center",
-											fontSize: "0.6875rem",
 											fontFamily: "var(--font-mono)",
-											background: amazon
-												? "rgba(30,215,96,0.2)"
-												: flipkart
-													? "rgba(79,142,247,0.2)"
-													: "var(--bg3)",
-											color: amazon
-												? "var(--accent)"
-												: flipkart
-													? "#4F8EF7"
-													: "var(--text-faint)",
-											border: amazon
-												? "1px solid rgba(30,215,96,0.35)"
-												: flipkart
-													? "1px solid rgba(79,142,247,0.35)"
-													: "1px solid transparent",
+											fontSize: 13,
+											fontWeight: 600,
+											color: "var(--text)",
+											flexShrink: 0,
 										}}
 									>
-										{day}
-									</div>
-								);
-							})}
-						</div>
-						<div style={{ display: "flex", gap: 16, marginTop: 16 }}>
-							{SALE_CALENDAR.map((s) => (
-								<div
-									key={s.name}
-									style={{ display: "flex", alignItems: "center", gap: 6 }}
-								>
-									<span
-										style={{
-											display: "inline-block",
-											width: 10,
-											height: 10,
-											borderRadius: 2,
-											background: s.color,
-											opacity: 0.7,
-										}}
-									/>
-									<span
-										style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}
-									>
-										{s.name} {s.dates}
+										{formatINR(item.now)}
 									</span>
-								</div>
-							))}
-						</div>
+								</button>
+							);
+						})}
+						{watchlistItems.length > 4 && (
+							<div
+								style={{
+									padding: "10px 18px",
+									borderTop: "1px solid var(--glass-plate-border)",
+								}}
+							>
+								<Link
+									href="/watchlist"
+									style={{
+										fontSize: "0.8125rem",
+										color: "var(--accent)",
+										fontWeight: 600,
+										textDecoration: "none",
+									}}
+								>
+									See all {watchlistItems.length} →
+								</Link>
+							</div>
+						)}
 					</Glass>
 				</div>
-			</section>
+			</div>
+		</div>
+	);
+}
 
+// ── Page ─────────────────────────────────────────────────────────────────────
+
+export default function HomePage() {
+	const router = useRouter();
+	const { user, ready } = useSupabaseUser();
+	const [query, setQuery] = useState("");
+
+	const { data: watchlistData } = useSWR<WatchlistPageItem[]>(
+		ready && user ? "/api/watchlist" : null,
+		(url: string) => fetchJson<WatchlistPageItem[]>(url),
+	);
+
+	function handleSearch(e: FormEvent) {
+		e.preventDefault();
+		const q = normalizeQuery(query);
+		if (q) router.push(`/compare?q=${encodeURIComponent(q)}`);
+	}
+
+	function navigateTo(q: string) {
+		const normalized = normalizeQuery(q);
+		if (normalized) router.push(`/compare?q=${encodeURIComponent(normalized)}`);
+	}
+
+	const watchlistItems = watchlistData ?? [];
+	const isReturning = ready && !!user && watchlistItems.length > 0;
+
+	return (
+		<div style={{ minHeight: "100vh", background: "var(--bg0)" }}>
+			<Nav />
+			{isReturning ? (
+				<HomeReturning
+					user={user}
+					query={query}
+					setQuery={setQuery}
+					onSearch={handleSearch}
+					onNavigate={navigateTo}
+					watchlistItems={watchlistItems}
+				/>
+			) : (
+				<HomeFirstVisit
+					query={query}
+					setQuery={setQuery}
+					onSearch={handleSearch}
+					onChip={navigateTo}
+				/>
+			)}
 			<style>{`
+        .pulse-dot-ring {
+          position: absolute;
+          inset: -3px;
+          border-radius: 6px;
+          background: var(--accent);
+          opacity: 0.25;
+          animation: pw-pulse 2.4s ease-in-out infinite;
+        }
+        @keyframes pw-pulse {
+          0%, 100% { transform: scale(1); opacity: 0.25; }
+          50% { transform: scale(1.6); opacity: 0; }
+        }
+        @media (max-width: 1024px) {
+          .returning-grid { grid-template-columns: 1fr !important; }
+        }
         @media (max-width: 768px) {
-          .hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
           .how-grid { grid-template-columns: 1fr !important; }
-          .editorial-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 600px) {
+          .home-inner { padding: 20px 20px 40px !important; }
         }
       `}</style>
 		</div>

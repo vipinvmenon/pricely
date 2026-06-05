@@ -1,4 +1,5 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import type { AlertPageItem } from '@/types'
 
 interface Alert {
   id:                string
@@ -17,14 +18,25 @@ interface AlertWithUser extends Alert {
   productTitle: string
 }
 
-export async function getAlerts(userId: string): Promise<Alert[]> {
+export async function getAlerts(userId: string): Promise<AlertPageItem[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('alerts')
-    .select('*')
+    .select('*, products(title, subtitle)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-  return (data ?? []) as Alert[]
+
+  type Row = Alert & { products: { title: string; subtitle: string | null } | null }
+  return ((data ?? []) as Row[]).map((row) => ({
+    id:              row.id,
+    productId:       row.product_id,
+    productTitle:    row.products?.title ?? row.product_id,
+    productSubtitle: row.products?.subtitle ?? null,
+    targetPrice:     row.target_price,
+    isActive:        row.is_active,
+    createdAt:       row.created_at,
+    lastTriggeredAt: row.last_triggered_at,
+  }))
 }
 
 export async function createAlert(
