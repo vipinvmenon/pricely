@@ -59,31 +59,48 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
       waitUntil: 'domcontentloaded',
       timeout:   25_000,
     })
-    await page.waitForSelector('[data-id]', { timeout: 15_000 })
+    await page.waitForSelector('a[href*="/p/itm"]', { timeout: 15_000 })
 
-    const items = await page.$$eval(
-      '[data-id]',
-      (els, max) =>
-        els.slice(0, max).map(el => ({
-          title: (
-            el.querySelector('[class*="KzDlHZ"],[class*="IRpwTa"],[class*="s1Q9rs"],[class*="WKTcLC"],[class*="RcXBOT"]')
-          )?.textContent?.trim() ?? '',
-          price: parseFloat(
-            (el.querySelector('[class*="Nx9bqj"],[class*="_30jeq3"],[class*="hl05eU"]')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
-          ),
-          mrp: parseFloat(
-            (el.querySelector('[class*="_3I9_wc"],[class*="yRaY8j"]')?.textContent ?? '0').replace(/[^0-9.]/g, ''),
-          ) || undefined,
-          url: (() => {
-            const a = el.querySelector('a[href]') as HTMLAnchorElement | null
-            if (!a) return ''
-            const href = a.getAttribute('href') || ''
-            return href.startsWith('http') ? href : 'https://www.flipkart.com' + href
-          })(),
-          outOfStock: !!el.querySelector('[class*="out-of-stock"]'),
-        })),
-      maxResults,
-    )
+    const items = await page.evaluate((max: number) => {
+      const seen = new Set<string>()
+      const results: { title: string; price: number; mrp: number | undefined; url: string }[] = []
+
+      for (const a of Array.from(document.querySelectorAll('a[href*="/p/itm"]'))) {
+        const title = (a as HTMLAnchorElement).textContent?.trim() || ''
+        const href  = (a as HTMLAnchorElement).getAttribute('href') || ''
+        if (!title || seen.has(href)) continue
+        seen.add(href)
+
+        // Walk up to find a container that has price text
+        let card: Element | null = a.parentElement
+        for (let i = 0; i < 8; i++) {
+          if (!card) break
+          if (card.textContent?.includes('₹')) break
+          card = card.parentElement
+        }
+        if (!card) continue
+
+        // Extract leaf elements starting with ₹ — first is current price, second is MRP
+        const priceEls = Array.from(card.querySelectorAll('*'))
+          .filter(el => el.children.length === 0 && (el.textContent?.trim() || '').startsWith('₹'))
+          .map(el => parseFloat((el.textContent || '0').replace(/[^0-9.]/g, '')))
+          .filter(n => n > 0)
+
+        const price = priceEls[0] ?? 0
+        const mrp   = priceEls[1] && priceEls[1] > price ? priceEls[1] : undefined
+
+        results.push({
+          title,
+          price,
+          mrp,
+          url: href.startsWith('http') ? href : 'https://www.flipkart.com' + href,
+        })
+
+        if (results.length >= max) break
+      }
+
+      return results
+    }, maxResults)
 
     return items
       .filter(item => item.price > 0 && item.title)
@@ -92,8 +109,8 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
         price:      item.price,
         mrp:        item.mrp,
         title:      item.title,
-        url:        item.url.startsWith('http') ? item.url : `https://www.flipkart.com${item.url}`,
-        stock:      item.outOfStock ? ('out_of_stock' as const) : ('in_stock' as const),
+        url:        item.url,
+        stock:      'in_stock' as const,
         delivery:   'Free · 2–4 days',
         returns:    '10 days',
         scrapedAt:  new Date().toISOString(),
