@@ -26,11 +26,11 @@ export const vijay_sales: Scraper = async ({ query, maxResults }) =>
         const seen = new Set<string>()
         const results: { title: string; price: number; mrp: number | undefined; url: string }[] = []
 
-        // Vijay Sales product links: /some-product-name-12345 (end with digits)
+        // Vijay Sales product links end with a numeric ID after a slash
         for (const a of Array.from(document.querySelectorAll('a[href]'))) {
           const href = (a as HTMLAnchorElement).getAttribute('href') || ''
-          if (!/\/[a-z0-9-]+-\d{4,}$/.test(href) && !/\.html$/.test(href)) continue
-          if (href.includes('category') || href.includes('brand') || href.includes('filter')) continue
+          if (!/\/\d{3,}$/.test(href) && !/\/\d{3,}[/?]/.test(href)) continue
+          if (href.includes('category') || href.includes('brand') || href.includes('filter') || href.includes('page')) continue
           const title = (a as HTMLAnchorElement).textContent?.trim() || ''
           if (!title || title.length < 5 || seen.has(href)) continue
           seen.add(href)
