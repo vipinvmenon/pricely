@@ -16,21 +16,22 @@ export const reliance_digital: Scraper = async ({ query, maxResults }) =>
     const page = await context.newPage()
     try {
       await page.goto(
-        `https://www.reliancedigital.in/search?q=${encodeURIComponent(query)}:relevance`,
+        `https://www.reliancedigital.in/products?q=${encodeURIComponent(query)}`,
         { waitUntil: 'domcontentloaded', timeout: 30_000 },
       )
-      await page.waitForSelector('a[href*="/p/"]', { timeout: 20_000 })
+      await page.waitForSelector('a[href*="/product/"]', { timeout: 20_000 })
 
       const items = await page.evaluate((max: number) => {
         const seen = new Set<string>()
         const results: { title: string; price: number; mrp: number | undefined; url: string }[] = []
 
-        for (const a of Array.from(document.querySelectorAll('a[href*="/p/"]'))) {
-          const href  = (a as HTMLAnchorElement).getAttribute('href') || ''
-          if (!/\/p\/\d+/.test(href)) continue
-          const title = (a as HTMLAnchorElement).textContent?.trim() || ''
-          if (!title || seen.has(href)) continue
-          seen.add(href)
+        for (const a of Array.from(document.querySelectorAll('a[href*="/product/"]'))) {
+          const rawHref = (a as HTMLAnchorElement).getAttribute('href') || ''
+          // Reliance Digital product URLs are /product/<slug>-<numeric-id>[?query]
+          const idMatch = rawHref.match(/\/product\/.+-(\d+)(?:[/?]|$)/)
+          if (!idMatch) continue
+          const id = idMatch[1]
+          if (seen.has(id)) continue
 
           let card: Element | null = a.parentElement
           for (let i = 0; i < 8; i++) {
@@ -40,6 +41,14 @@ export const reliance_digital: Scraper = async ({ query, maxResults }) =>
           }
           if (!card) continue
 
+          // Title is the card text up to the first price; strip promo prefixes.
+          const cardText = (card.textContent || '').replace(/\s+/g, ' ').trim()
+          const title = cardText
+            .split('₹')[0]
+            .replace(/^(LIMITED_TIME_OFFER|NEWLY_LAUNCHED)\s*/i, '')
+            .trim()
+          if (!title) continue
+
           const priceEls = Array.from(card.querySelectorAll('*'))
             .filter(el => el.children.length === 0 && (el.textContent?.trim() || '').startsWith('₹'))
             .map(el => parseFloat((el.textContent || '0').replace(/[^0-9.]/g, '')))
@@ -48,11 +57,13 @@ export const reliance_digital: Scraper = async ({ query, maxResults }) =>
           const price = priceEls[0] ?? 0
           const mrp   = priceEls[1] && priceEls[1] > price ? priceEls[1] : undefined
 
+          seen.add(id)
+          const path = rawHref.split('?')[0]
           results.push({
             title,
             price,
             mrp,
-            url: href.startsWith('http') ? href : 'https://www.reliancedigital.in' + href,
+            url: path.startsWith('http') ? path : 'https://www.reliancedigital.in' + path,
           })
 
           if (results.length >= max) break

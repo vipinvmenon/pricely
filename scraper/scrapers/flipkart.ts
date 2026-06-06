@@ -66,9 +66,17 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
       const results: { title: string; price: number; mrp: number | undefined; url: string }[] = []
 
       for (const a of Array.from(document.querySelectorAll('a[href*="/p/itm"]'))) {
-        const title = (a as HTMLAnchorElement).textContent?.trim() || ''
         const href  = (a as HTMLAnchorElement).getAttribute('href') || ''
-        if (!title || seen.has(href)) continue
+        if (seen.has(href)) continue
+
+        // Product name is the link text before pricing/rating noise begins.
+        const rawText = (a.textContent || '').replace(/\s+/g, ' ').trim()
+        const title = rawText
+          .split('₹')[0]
+          .replace(/^Add to Compare/i, '')
+          .replace(/\d+(\.\d+)?[\d,]*\s*Ratings.*$/i, '')
+          .trim()
+        if (!title) continue
         seen.add(href)
 
         // Walk up to find a container that has price text

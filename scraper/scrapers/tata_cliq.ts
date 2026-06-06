@@ -16,23 +16,22 @@ export const tata_cliq: Scraper = async ({ query, maxResults }) =>
     const page = await context.newPage()
     try {
       await page.goto(
-        `https://www.tatacliq.com/search#?searchCategory=all&text=${encodeURIComponent(query)}`,
+        `https://www.tatacliq.com/search/?searchCategory=all&text=${encodeURIComponent(query)}`,
         { waitUntil: 'domcontentloaded', timeout: 30_000 },
       )
-      // Tata Cliq product URLs: /buy-product-name/p/ALPHANUM
-      await page.waitForSelector('a[href*="/p/"]', { timeout: 20_000 })
+      // Tata Cliq product URLs: /<slug>/p-<id>
+      await page.waitForSelector('a[href*="/p-"]', { timeout: 20_000 })
 
       const items = await page.evaluate((max: number) => {
         const seen = new Set<string>()
         const results: { title: string; price: number; mrp: number | undefined; url: string }[] = []
 
-        for (const a of Array.from(document.querySelectorAll('a[href*="/p/"]'))) {
+        for (const a of Array.from(document.querySelectorAll('a[href*="/p-"]'))) {
           const href  = (a as HTMLAnchorElement).getAttribute('href') || ''
-          if (!/\/p\/[A-Z0-9]{5,}/.test(href)) continue
-          const title = (a as HTMLAnchorElement).textContent?.trim() ||
-                        (a as HTMLAnchorElement).getAttribute('title') || ''
-          if (!title || seen.has(href)) continue
-          seen.add(href)
+          const idMatch = href.match(/\/p-([a-z0-9]+)/i)
+          if (!idMatch) continue
+          const id = idMatch[1]
+          if (seen.has(id)) continue
 
           let card: Element | null = a.parentElement
           for (let i = 0; i < 8; i++) {
@@ -42,6 +41,15 @@ export const tata_cliq: Scraper = async ({ query, maxResults }) =>
           }
           if (!card) continue
 
+          const cardText = (card.textContent || '').replace(/\s+/g, ' ').trim()
+          const title = cardText
+            .split('₹')[0]
+            .replace(/^quick view\s*/i, '')
+            // Card repeats the brand label glued to the title (e.g. "HammerHammer ...", "GRIPPGripp ...").
+            .replace(/^([A-Za-z]+)\1(?=[A-Z\s])/, '$1')
+            .trim()
+          if (!title) continue
+
           const priceEls = Array.from(card.querySelectorAll('*'))
             .filter(el => el.children.length === 0 && (el.textContent?.trim() || '').startsWith('₹'))
             .map(el => parseFloat((el.textContent || '0').replace(/[^0-9.]/g, '')))
@@ -50,11 +58,13 @@ export const tata_cliq: Scraper = async ({ query, maxResults }) =>
           const price = priceEls[0] ?? 0
           const mrp   = priceEls[1] && priceEls[1] > price ? priceEls[1] : undefined
 
+          seen.add(id)
+          const path = href.split('?')[0]
           results.push({
             title,
             price,
             mrp,
-            url: href.startsWith('http') ? href : 'https://www.tatacliq.com' + href,
+            url: path.startsWith('http') ? path : 'https://www.tatacliq.com' + path,
           })
 
           if (results.length >= max) break

@@ -31,7 +31,7 @@ export async function sendPriceDropEmail(params: PriceDropEmailParams): Promise<
   const resend = new Resend(apiKey)
 
   await resend.emails.send({
-    from:    'Pricely <alerts@pricely.in>',
+    from:    'Pricely <onboarding@resend.dev>',
     to:      params.to,
     subject: `Price drop: ${params.productTitle} is now ₹${params.currentPrice.toLocaleString('en-IN')}`,
     html:    buildEmailHtml(params),
