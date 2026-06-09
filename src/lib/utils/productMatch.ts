@@ -8,9 +8,15 @@ const ACCESSORY_TERMS = [
 
 function tokenMatches(titleNorm: string, token: string): boolean {
   if (/^\d+$/.test(token)) {
-    return new RegExp(`(?:^|\\s|iphone\\s)${token}(?:\\s|$|[^0-9])`).test(titleNorm)
+    // Require a model-number context; reject "15" inside "15.93 cm" screen sizes.
+    return new RegExp(`(?:^|\\s|iphone\\s)${token}(?!\\.\\d)(?:\\s|$|[^0-9])`).test(titleNorm)
   }
   return titleNorm.includes(token)
+}
+
+function iphoneGenerationNumber(titleNorm: string): string | null {
+  const match = titleNorm.match(/iphone\s*(\d+)/i)
+  return match?.[1] ?? null
 }
 
 /** Higher = better match to the search query; accessories and missing tokens score down. */
@@ -31,6 +37,11 @@ export function scoreProductRelevance(title: string, query: string): number {
 
   // Avoid "Reno15Pro" matching "iphone 15 pro" via shared digit tokens.
   if (queryNorm.includes('iphone') && !titleNorm.includes('iphone')) score -= 20
+
+  // Penalize wrong iPhone generation (e.g. query "15 pro" vs title "17 Pro").
+  const queryGen = iphoneGenerationNumber(queryNorm)
+  const titleGen = iphoneGenerationNumber(titleNorm)
+  if (queryGen && titleGen && queryGen !== titleGen) score -= 25
 
   return score
 }
