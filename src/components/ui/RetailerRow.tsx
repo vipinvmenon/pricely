@@ -7,6 +7,7 @@ interface RetailerRowProps {
   rank: number
   name: string
   isLowest?: boolean
+  available?: boolean
   price: number
   mrp?: number
   delivery: string
@@ -19,6 +20,7 @@ export function RetailerRow({
   rank,
   name,
   isLowest,
+  available = true,
   price,
   mrp,
   delivery,
@@ -27,6 +29,7 @@ export function RetailerRow({
   onBuy,
 }: RetailerRowProps) {
   const isLowStock = stock.toLowerCase().includes('low')
+  const stockLabel = stock === 'not_listed' ? 'Not listed' : stock
 
   return (
     <div
@@ -39,6 +42,7 @@ export function RetailerRow({
         borderRadius: 'var(--r-md)',
         background: isLowest ? 'var(--accent-dim)' : 'transparent',
         borderLeft: isLowest ? '2px solid var(--accent)' : '2px solid transparent',
+        opacity: available ? 1 : 0.55,
         transition: 'background 0.15s',
       }}
     >
@@ -85,11 +89,17 @@ export function RetailerRow({
       </div>
 
       <div style={{ textAlign: 'right' }}>
-        <PriceBadge value={price} size="md" />
-        {mrp && mrp > price && (
-          <div>
-            <PriceBadge value={mrp} size="sm" strike />
-          </div>
+        {available ? (
+          <>
+            <PriceBadge value={price} size="md" />
+            {mrp && mrp > price && (
+              <div>
+                <PriceBadge value={mrp} size="sm" strike />
+              </div>
+            )}
+          </>
+        ) : (
+          <span style={{ fontSize: '0.9375rem', color: 'var(--text-faint)' }}>—</span>
         )}
       </div>
 
@@ -120,12 +130,16 @@ export function RetailerRow({
           whiteSpace: 'nowrap',
         }}
       >
-        {stock}
+        {stockLabel}
       </span>
 
-      <Button variant={isLowest ? 'primary' : 'ghost'} size="sm" onClick={onBuy}>
-        Buy
-      </Button>
+      {available ? (
+        <Button variant={isLowest ? 'primary' : 'ghost'} size="sm" onClick={onBuy}>
+          Buy
+        </Button>
+      ) : (
+        <span style={{ fontSize: '0.8125rem', color: 'var(--text-faint)', padding: '0 12px' }}>—</span>
+      )}
     </div>
   )
 }

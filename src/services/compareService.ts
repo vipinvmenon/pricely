@@ -1,6 +1,7 @@
 import { scraperClient } from '@/lib/scraper/client'
 import { cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
+import { bestProductTitle, pickBestPerPlatform } from '@/lib/utils/productMatch'
 import { PLATFORMS } from '@/lib/utils/platforms'
 import { priceHistoryService } from './priceHistoryService'
 import type { CompareResponse, PlatformId } from '@/types'
@@ -18,25 +19,44 @@ export async function compare(query: string, city: string): Promise<CompareRespo
   if (cached) return cached
 
   const { results, errors } = await scraperClient.scrape({
-    query, platforms: RETAIL_PLATFORMS, city, maxResults: 1,
+    query, platforms: RETAIL_PLATFORMS, city, maxResults: 5,
   })
 
-  const retailers = results
+  const matched = pickBestPerPlatform(results, query)
     .sort((a, b) => a.price - b.price)
-    .map((r, i) => ({
-      rank:     i + 1,
-      name:     PLATFORMS[r.platformId]?.name ?? String(r.platformId),
-      isLowest: i === 0,
-      price:    r.price,
-      mrp:      r.mrp,
-      delivery: r.delivery ?? '',
-      returns:  r.returns ?? '',
-      stock:    r.stock,
-      buyUrl:   r.url,
+
+  const pricedRetailers = matched.map((r, i) => ({
+    rank:      i + 1,
+    name:      PLATFORMS[r.platformId]?.name ?? String(r.platformId),
+    isLowest:  i === 0,
+    available: true,
+    price:     r.price,
+    mrp:       r.mrp,
+    delivery:  r.delivery ?? '',
+    returns:   r.returns ?? '',
+    stock:     r.stock,
+    buyUrl:    r.url,
+  }))
+
+  const matchedIds = new Set(matched.map(r => r.platformId))
+  const unlistedRetailers = RETAIL_PLATFORMS
+    .filter(id => !matchedIds.has(id))
+    .map((id, i) => ({
+      rank:      pricedRetailers.length + i + 1,
+      name:      PLATFORMS[id]?.name ?? String(id),
+      isLowest:  false,
+      available: false,
+      price:     0,
+      delivery:  '—',
+      returns:   '—',
+      stock:     'not_listed',
+      buyUrl:    '',
     }))
 
+  const retailers = [...pricedRetailers, ...unlistedRetailers]
+
   await priceHistoryService.writePricePoints(
-    results.map((r) => ({
+    matched.map((r) => ({
       productId:  query,
       platformId: r.platformId,
       city,
@@ -49,7 +69,7 @@ export async function compare(query: string, city: string): Promise<CompareRespo
   const response: CompareResponse = {
     product: {
       id:       query,
-      name:     results[0]?.title ?? query,
+      name:     bestProductTitle(matched, query),
       brand:    '',
       category: 'electronics',
     },

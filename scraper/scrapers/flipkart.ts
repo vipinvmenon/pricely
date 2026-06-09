@@ -73,6 +73,7 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
         const rawText = (a.textContent || '').replace(/\s+/g, ' ').trim()
         const title = rawText
           .split('₹')[0]
+          .replace(/^Currently unavailable/i, '')
           .replace(/^Add to Compare/i, '')
           .replace(/\d+(\.\d+)?[\d,]*\s*Ratings.*$/i, '')
           .trim()

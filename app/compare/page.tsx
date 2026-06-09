@@ -213,7 +213,10 @@ function ComparePageContent() {
 
 	const retailers = data?.retailers ?? [];
 	const visibleRetailers = showAll ? retailers : retailers.slice(0, 6);
-	const lowest = retailers.find((r) => r.isLowest) ?? retailers[0];
+	const lowest =
+		retailers.find((r) => r.isLowest && r.available !== false) ??
+		retailers.find((r) => r.available !== false);
+	const pricedCount = retailers.filter((r) => r.available !== false).length;
 	const verdict = data?.verdict;
 
 	function navigateToQuery(raw: string) {
@@ -551,8 +554,7 @@ function ComparePageContent() {
 									}}
 								>
 									<span className="pulse-dot" />
-									{visibleRetailers.length} of {retailers.length} retailers ·
-									sorted by price
+									{pricedCount} priced · {retailers.length} retailers tracked
 								</div>
 								<div style={{ display: "flex", gap: 8 }}>
 									{["Price", "Delivery", "Trust"].map((s, i) => (
@@ -610,12 +612,15 @@ function ComparePageContent() {
 										rank={r.rank}
 										name={r.name}
 										isLowest={r.isLowest}
+										available={r.available}
 										price={r.price}
 										mrp={r.mrp}
 										delivery={r.delivery}
 										returns={r.returns}
 										stock={r.stock}
-										onBuy={() => window.open(r.buyUrl, "_blank")}
+										onBuy={() => {
+											if (r.buyUrl) window.open(r.buyUrl, "_blank");
+										}}
 									/>
 								))}
 

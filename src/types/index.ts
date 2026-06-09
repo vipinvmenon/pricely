@@ -32,6 +32,7 @@ export type RetailerRow = {
   rank: number
   name: string
   isLowest?: boolean
+  available?: boolean
   price: number
   mrp?: number
   delivery: string
