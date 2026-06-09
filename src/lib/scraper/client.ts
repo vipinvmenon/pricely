@@ -12,7 +12,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
       'Authorization': `Bearer ${SECRET}`,
     },
     body:   JSON.stringify(body),
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(25_000),
   })
   if (!res.ok) throw new Error(`Scraper responded ${res.status}`)
   return res.json() as Promise<T>
