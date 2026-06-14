@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { shouldUseMockData } from '@/lib/runtime/mockMode'
 import type { CompareResponse } from '@/types'
 
 const QuerySchema = z.object({
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
     )
   }
 
-  if (!process.env.SCRAPER_SERVICE_URL) {
+  if (shouldUseMockData() || !process.env.SCRAPER_SERVICE_URL) {
     const response = NextResponse.json(MOCK_COMPARE_RESPONSE)
     response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
     return response

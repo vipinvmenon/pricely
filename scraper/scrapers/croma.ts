@@ -1,62 +1,92 @@
-import { chromium } from 'playwright'
 import type { Scraper, ScraperResult } from '../types'
+import { isAccessDenied, withBrowserPage } from '../lib/browserContext'
 import { withRetry } from '../lib/retry'
 
+const PINCODE = '400001'
+
+async function ensurePincode(page: import('playwright').Page): Promise<void> {
+  await page.goto('https://www.croma.com/', {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  })
+
+  const title = await page.title()
+  const bodyText = await page.locator('body').innerText()
+  if (isAccessDenied(title, bodyText)) {
+    throw new Error('Croma blocked request (Akamai Access Denied)')
+  }
+
+  const pinInput = page.locator('input[maxlength="6"]').first()
+  if ((await pinInput.count()) > 0) {
+    await pinInput.fill(PINCODE).catch(() => undefined)
+    await page
+      .getByRole('button', { name: /continue/i })
+      .click({ timeout: 8_000 })
+      .catch(() => undefined)
+    await page.waitForTimeout(2_000)
+  }
+}
+
+function searchUrl(query: string): string {
+  const params = new URLSearchParams({
+    q: `${query}:relevance`,
+    text: query,
+  })
+  return `https://www.croma.com/searchB?${params.toString()}`
+}
+
 export const croma: Scraper = async ({ query, maxResults }) =>
-  withRetry(async () => {
-    const browser = await chromium.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    })
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      viewport:  { width: 1280, height: 800 },
-      locale:    'en-IN',
-    })
-    const page = await context.newPage()
-    try {
-      await page.goto(`https://www.croma.com/search?q=${encodeURIComponent(query)}`, {
+  withRetry(async () =>
+    withBrowserPage(async (page) => {
+      await ensurePincode(page)
+
+      await page.goto(searchUrl(query), {
         waitUntil: 'domcontentloaded',
-        timeout:   30_000,
+        timeout: 30_000,
       })
-      await page.waitForSelector('a[href*="/p/"]', { timeout: 20_000 })
+
+      const title = await page.title()
+      const bodyText = await page.locator('body').innerText()
+      if (isAccessDenied(title, bodyText)) {
+        throw new Error('Croma blocked request (Akamai Access Denied)')
+      }
+
+      await page
+        .waitForSelector('a[href*="/p/"]', { timeout: 20_000 })
+        .catch(() => undefined)
 
       const items = await page.evaluate((max: number) => {
         const seen = new Set<string>()
         const results: { title: string; price: number; mrp: number | undefined; url: string }[] = []
 
         for (const a of Array.from(document.querySelectorAll('a[href*="/p/"]'))) {
-          const href = (a as HTMLAnchorElement).getAttribute('href') || ''
-          // Croma product URLs end with a numeric ID: /p/12345
-          if (!/\/p\/\d+/.test(href)) continue
-          const title = (a as HTMLAnchorElement).textContent?.trim() || ''
-            || (a as HTMLAnchorElement).getAttribute('title') || ''
-          if (!title || seen.has(href)) continue
-          seen.add(href)
+          const href = (a as HTMLAnchorElement).href.split('?')[0]
+          const idMatch = href.match(/\/p\/(\d+)/)
+          if (!idMatch) continue
+          const id = idMatch[1]
+          if (seen.has(id)) continue
 
-          // Walk up to find price container
-          let card: Element | null = a.parentElement
-          for (let i = 0; i < 8; i++) {
+          const titleRaw = (a as HTMLAnchorElement).textContent?.replace(/\s+/g, ' ').trim() ?? ''
+          if (titleRaw.length < 10) continue
+
+          let card: Element | null = a.closest('.product-wrap') ?? a.parentElement
+          for (let i = 0; i < 10; i++) {
             if (!card) break
             if (card.textContent?.includes('₹')) break
             card = card.parentElement
           }
-          if (!card) continue
 
-          const priceEls = Array.from(card.querySelectorAll('*'))
-            .filter(el => el.children.length === 0 && (el.textContent?.trim() || '').startsWith('₹'))
-            .map(el => parseFloat((el.textContent || '0').replace(/[^0-9.]/g, '')))
-            .filter(n => n > 0)
+          const cardText = (card?.textContent ?? '').replace(/\s+/g, ' ').trim()
+          const prices = [...cardText.matchAll(/₹\s*([\d,]+(?:\.\d+)?)/g)]
+            .map((match) => parseFloat((match[1] ?? '0').replace(/,/g, '')))
+            .filter((value) => value > 0)
 
-          const price = priceEls[0] ?? 0
-          const mrp   = priceEls[1] && priceEls[1] > price ? priceEls[1] : undefined
+          const price = prices[0] ?? 0
+          const mrp = prices[1] && prices[1] > price ? prices[1] : undefined
+          const title = titleRaw.split('₹')[0].trim()
 
-          results.push({
-            title,
-            price,
-            mrp,
-            url: href.startsWith('http') ? href : 'https://www.croma.com' + href,
-          })
+          seen.add(id)
+          results.push({ title, price, mrp, url: href })
 
           if (results.length >= max) break
         }
@@ -65,20 +95,20 @@ export const croma: Scraper = async ({ query, maxResults }) =>
       }, maxResults)
 
       return items
-        .filter(item => item.price > 0 && item.title)
-        .map(item => ({
-          platformId: 'croma',
-          price:      item.price,
-          mrp:        item.mrp,
-          title:      item.title,
-          url:        item.url,
-          stock:      'in_stock' as const,
-          delivery:   '3–5 days',
-          returns:    '7 days',
-          scrapedAt:  new Date().toISOString(),
-        } satisfies ScraperResult))
-    } finally {
-      await context.close()
-      await browser.close()
-    }
-  })
+        .filter((item) => item.price > 0 && item.title)
+        .map(
+          (item) =>
+            ({
+              platformId: 'croma',
+              price: item.price,
+              mrp: item.mrp,
+              title: item.title,
+              url: item.url,
+              stock: 'in_stock' as const,
+              delivery: '3–5 days',
+              returns: '7 days',
+              scrapedAt: new Date().toISOString(),
+            }) satisfies ScraperResult,
+        )
+    }),
+  )

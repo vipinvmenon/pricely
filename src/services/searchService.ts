@@ -1,6 +1,7 @@
 import { scraperClient } from '@/lib/scraper/client'
 import { cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
+import { shouldUseMockData } from '@/lib/runtime/mockMode'
 import { PLATFORMS } from '@/lib/utils/platforms'
 import type { PriceResult, PlatformId, ScrapeResult } from '@/types'
 
@@ -36,7 +37,7 @@ export async function search(
   query: string,
   city: string,
 ): Promise<PriceResult[]> {
-  if (!process.env.SCRAPER_SERVICE_URL) return MOCK_SEARCH_RESULTS
+  if (shouldUseMockData() || !process.env.SCRAPER_SERVICE_URL) return MOCK_SEARCH_RESULTS
 
   const cacheKey = keys.search(query, city)
   const cached = await cacheGet<PriceResult[]>(cacheKey)

@@ -8,6 +8,10 @@ const PostBodySchema = z.object({
   city:        z.string().min(1).default('mumbai'),
   targetPrice: z.number().positive(),
   platformId:  z.string().optional(),
+  title:       z.string().min(1).optional(),
+  category:    z.string().optional(),
+  subtitle:    z.string().optional(),
+  imageUrl:    z.string().optional(),
 })
 
 const DeleteQuerySchema = z.object({
@@ -45,8 +49,34 @@ export async function POST(request: Request) {
     )
   }
 
-  const { productId, city, targetPrice, platformId } = parsed.data
-  const result = await alertsService.createAlert(user.id, productId, city, targetPrice, platformId)
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+    return NextResponse.json(
+      { error: 'service_role_not_configured', message: 'Add SUPABASE_SERVICE_ROLE_KEY to .env.local' },
+      { status: 503 },
+    )
+  }
+
+  const { productsService } = await import('@/services/productsService')
+  const { normalizeProductCategory } = await import('@/lib/utils/productCategory')
+
+  const { productId, city, targetPrice, platformId, title, category, subtitle, imageUrl } =
+    parsed.data
+
+  await productsService.upsertProduct({
+    id:       productId,
+    title:    title ?? productId,
+    category: category ?? normalizeProductCategory('electronics'),
+    subtitle,
+    imageUrl,
+  })
+
+  const result = await alertsService.createAlert(
+    user.id,
+    productId,
+    city,
+    targetPrice,
+    platformId,
+  )
 
   const response = NextResponse.json(result, { status: 201 })
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR, { useSWRConfig } from "swr";
@@ -16,7 +16,7 @@ import { useSupabaseUser } from "@/lib/hooks/useSupabaseUser";
 import { trackProduct } from "@/lib/watchlist/trackProduct";
 import { normalizeProductCategory } from "@/lib/utils/productCategory";
 import { fetchJson } from "@/lib/utils/fetchJson";
-import { normalizeQuery } from "@/lib/utils/format";
+import { formatINR, normalizeQuery } from "@/lib/utils/format";
 import type { CompareResponse, TrendingItem } from "@/types";
 
 function SearchIcon() {
@@ -180,6 +180,11 @@ function ComparePageContent() {
 		"idle",
 	);
 	const [trackError, setTrackError] = useState<string | null>(null);
+	const [targetPrice, setTargetPrice] = useState("");
+	const [alertState, setAlertState] = useState<"idle" | "loading" | "done">(
+		"idle",
+	);
+	const [alertError, setAlertError] = useState<string | null>(null);
 
 	// Sync input when URL param changes (React's "adjust state on render" pattern)
 	if (paramQuery !== prevParamQuery) {
@@ -192,8 +197,16 @@ function ComparePageContent() {
 		data,
 		error,
 		isLoading,
-	} = useSWR<CompareResponse>(compareUrl(activeQuery), (url: string) =>
-		fetchJson<CompareResponse>(url),
+	} = useSWR<CompareResponse>(
+		compareUrl(activeQuery),
+		(url: string) => fetchJson<CompareResponse>(url),
+		{
+			// Compare can fan out to multiple scrapers, so avoid automatic refetch storms.
+			refreshInterval: 0,
+			revalidateOnFocus: false,
+			revalidateOnReconnect: false,
+			dedupingInterval: 300_000,
+		},
 	);
 
 	const { data: trending } = useSWR<TrendingItem[]>(
@@ -218,6 +231,20 @@ function ComparePageContent() {
 		retailers.find((r) => r.available !== false);
 	const pricedCount = retailers.filter((r) => r.available !== false).length;
 	const verdict = data?.verdict;
+	const productId = data?.product.id;
+
+	useEffect(() => {
+		setTrackState("idle");
+		setTrackError(null);
+		setAlertState("idle");
+		setAlertError(null);
+	}, [productId]);
+
+	useEffect(() => {
+		if (lowest?.price) {
+			setTargetPrice(String(Math.round(lowest.price * 0.95)));
+		}
+	}, [productId, lowest?.price]);
 
 	function navigateToQuery(raw: string) {
 		const q = normalizeQuery(raw);
@@ -269,6 +296,58 @@ function ComparePageContent() {
 				message.includes("service_role")
 					? "Add SUPABASE_SERVICE_ROLE_KEY to .env.local and restart the dev server."
 					: message || "Could not save to watchlist. Did you run supabase/schema.sql?",
+			);
+		}
+	}
+
+	async function handleSetAlert() {
+		if (!data?.product.id || alertState === "loading") return;
+
+		const parsed = Number(targetPrice.replace(/[^0-9]/g, ""));
+		if (!parsed || parsed <= 0) {
+			setAlertError("Enter a valid target price.");
+			return;
+		}
+
+		if (!user) {
+			const next = `/compare?q=${encodeURIComponent(activeQuery)}`;
+			router.push(
+				configured
+					? `/signin?next=${encodeURIComponent(next)}`
+					: "/alerts",
+			);
+			return;
+		}
+
+		setAlertState("loading");
+		setAlertError(null);
+		try {
+			await fetchJson("/api/alerts", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					productId: data.product.id,
+					city: DEFAULT_CITY,
+					targetPrice: parsed,
+					title: data.product.name,
+					category: normalizeProductCategory(data.product.category),
+					subtitle:
+						[data.product.brand, data.product.category]
+							.filter(Boolean)
+							.join(" · ") || undefined,
+					imageUrl: data.product.image,
+				}),
+			});
+			await mutate("/api/alerts");
+			setAlertState("done");
+		} catch (err) {
+			setAlertState("idle");
+			const message =
+				err instanceof Error ? err.message : "Could not create alert.";
+			setAlertError(
+				message.includes("service_role")
+					? "Add SUPABASE_SERVICE_ROLE_KEY to .env.local and restart the server."
+					: message || "Could not create alert. Did you run supabase/schema.sql?",
 			);
 		}
 	}
@@ -531,6 +610,134 @@ function ComparePageContent() {
 									View watchlist →
 								</Link>
 							)}
+
+							<Glass
+								variant="plate"
+								style={{
+									padding: "var(--sp-4)",
+									borderRadius: "var(--r-lg)",
+									display: "flex",
+									flexDirection: "column",
+									gap: 12,
+								}}
+							>
+								<div
+									style={{
+										fontFamily: "var(--font-mono)",
+										fontSize: "0.6875rem",
+										letterSpacing: "0.1em",
+										textTransform: "uppercase",
+										color: "var(--text-faint)",
+									}}
+								>
+									Price alert
+								</div>
+								<label
+									style={{
+										fontSize: "0.8125rem",
+										color: "var(--text-dim)",
+										display: "flex",
+										flexDirection: "column",
+										gap: 8,
+									}}
+								>
+									Notify me when price drops below
+									<Glass
+										variant="plate"
+										style={{
+											display: "flex",
+											alignItems: "center",
+											borderRadius: "var(--r-md)",
+											padding: "0 12px",
+										}}
+									>
+										<span
+											style={{
+												color: "var(--text-faint)",
+												fontFamily: "var(--font-mono)",
+												fontSize: "0.875rem",
+											}}
+										>
+											₹
+										</span>
+										<input
+											type="text"
+											inputMode="numeric"
+											value={targetPrice}
+											onChange={(e) =>
+												setTargetPrice(
+													e.target.value.replace(/[^0-9]/g, ""),
+												)
+											}
+											placeholder={
+												lowest?.price
+													? String(Math.round(lowest.price * 0.95))
+													: "0"
+											}
+											style={{
+												flex: 1,
+												background: "none",
+												border: "none",
+												outline: "none",
+												color: "var(--text)",
+												fontSize: "1rem",
+												fontFamily: "var(--font-mono)",
+												padding: "12px 8px",
+											}}
+										/>
+									</Glass>
+								</label>
+								{lowest?.price ? (
+									<p
+										style={{
+											fontSize: "0.75rem",
+											color: "var(--text-faint)",
+											margin: 0,
+										}}
+									>
+										Lowest now: {formatINR(lowest.price)}
+									</p>
+								) : null}
+								{alertError && (
+									<p
+										style={{
+											fontSize: "0.8125rem",
+											color: "var(--danger)",
+											margin: 0,
+											lineHeight: 1.5,
+										}}
+									>
+										{alertError}
+									</p>
+								)}
+								<Button
+									variant="ghost"
+									size="md"
+									fullWidth
+									disabled={!authReady || alertState === "loading"}
+									onClick={() => void handleSetAlert()}
+								>
+									{alertState === "done"
+										? "Alert set"
+										: alertState === "loading"
+											? "Saving…"
+											: "Set alert"}
+								</Button>
+								{alertState === "done" && (
+									<Link
+										href="/alerts"
+										style={{
+											fontSize: "0.8125rem",
+											color: "var(--accent)",
+											fontWeight: 600,
+											textDecoration: "none",
+											textAlign: "center",
+										}}
+									>
+										View alerts →
+									</Link>
+								)}
+							</Glass>
 						</div>
 
 						<div>

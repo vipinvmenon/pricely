@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd scraper && npm install && npx playwright install chromium --with-deps && npm run build"
+buildCommand = "cd scraper && npm install && npx playwright install chromium chrome --with-deps && npm run build"
 
 [deploy]
 startCommand = "node scraper/dist/index.js"

@@ -6,11 +6,14 @@ import { PLATFORMS } from '@/lib/utils/platforms'
 import { priceHistoryService } from './priceHistoryService'
 import type { CompareResponse, PlatformId } from '@/types'
 
-// Only platforms that reliably return data under headless scraping.
-// croma (Akamai), myntra (HTTP/2 block), and vijay_sales (stale/degraded
-// headless responses) are excluded until a stealth/proxy path is added.
 const RETAIL_PLATFORMS: PlatformId[] = [
-  'amazon', 'flipkart', 'reliance_digital', 'tata_cliq',
+  'amazon',
+  'flipkart',
+  'croma',
+  'reliance_digital',
+  'vijay_sales',
+  'tata_cliq',
+  'myntra',
 ]
 
 export async function compare(query: string, city: string): Promise<CompareResponse> {
