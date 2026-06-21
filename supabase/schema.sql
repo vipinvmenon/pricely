@@ -11,14 +11,16 @@ create table if not exists public.user_profiles (
 
 -- products
 create table if not exists public.products (
-  id          text        primary key,
-  title       text        not null,
-  category    text        not null default 'electronics',
-  subtitle    text,
-  image_url   text,
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  id            text        primary key,
+  title         text        not null,
+  category      text        not null default 'electronics',
+  subtitle      text,
+  image_url     text,
+  search_query  text,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
 );
+create index if not exists products_search_query_idx on public.products(search_query);
 
 -- watchlist
 create table if not exists public.watchlist (

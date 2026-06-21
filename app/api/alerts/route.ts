@@ -12,6 +12,7 @@ const PostBodySchema = z.object({
   category:    z.string().optional(),
   subtitle:    z.string().optional(),
   imageUrl:    z.string().optional(),
+  searchQuery: z.string().min(1).optional(),
 })
 
 const DeleteQuerySchema = z.object({
@@ -59,15 +60,16 @@ export async function POST(request: Request) {
   const { productsService } = await import('@/services/productsService')
   const { normalizeProductCategory } = await import('@/lib/utils/productCategory')
 
-  const { productId, city, targetPrice, platformId, title, category, subtitle, imageUrl } =
+  const { productId, city, targetPrice, platformId, title, category, subtitle, imageUrl, searchQuery } =
     parsed.data
 
   await productsService.upsertProduct({
-    id:       productId,
-    title:    title ?? productId,
-    category: category ?? normalizeProductCategory('electronics'),
+    id:          productId,
+    title:       title ?? productId,
+    category:    category ?? normalizeProductCategory('electronics'),
     subtitle,
     imageUrl,
+    searchQuery,
   })
 
   const result = await alertsService.createAlert(

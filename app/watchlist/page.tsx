@@ -49,6 +49,11 @@ export default function WatchlistPage() {
 	const { data, isLoading, error } = useSWR<WatchlistPageItem[]>(
 		watchlistKey,
 		(url: string) => fetchJson<WatchlistPageItem[]>(url),
+		{
+			// Live enrichment fans out to compare/scrapers — load once, no polling.
+			refreshInterval: 0,
+			revalidateOnFocus: false,
+		},
 	);
 
 	const isUnauthenticated = supabaseConfigured && authReady && !userId;

@@ -9,11 +9,11 @@ const QuerySchema = z.object({
 })
 
 const MOCK_TRENDING: TrendingItem[] = [
-  { id: '1', query: 'Milk 1L Amul',           category: 'grocery' },
-  { id: '2', query: 'Bread Brown 400g',        category: 'grocery' },
-  { id: '3', query: 'Sony WH-1000XM5',         category: 'electronics' },
-  { id: '4', query: 'iPhone 15 128GB',         category: 'electronics' },
-  { id: '5', query: 'Dyson V12 Detect Slim',   category: 'electronics' },
+  { id: 'sony-wh-1000xm5',           query: 'Sony WH-1000XM5',       category: 'electronics' },
+  { id: 'iphone-15-128gb',           query: 'iPhone 15 128GB',       category: 'electronics' },
+  { id: 'dyson-v12-detect-slim',     query: 'Dyson V12 Detect Slim', category: 'electronics' },
+  { id: 'asics-novablast-4',         query: 'Asics Novablast 4',     category: 'electronics' },
+  { id: 'bose-qc-ultra',             query: 'Bose QC Ultra',         category: 'electronics' },
 ]
 
 export async function GET(request: Request) {
@@ -44,12 +44,13 @@ export async function GET(request: Request) {
     return response
   }
 
-  // Supabase query: top-10 most-watched products by watchlist count in city
-  // Falls back to mock until Supabase is configured
-  const items = MOCK_TRENDING
-  await cacheSetex(cacheKey, TTL.trending, items)
+  const { trendingService } = await import('@/services/trendingService')
+  const items = await trendingService.getTrending(city)
+  const result = items.length > 0 ? items : MOCK_TRENDING
 
-  const response = NextResponse.json(items)
+  await cacheSetex(cacheKey, TTL.trending, result)
+
+  const response = NextResponse.json(result)
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
   return response
 }

@@ -273,6 +273,7 @@ function ComparePageContent() {
 							.filter(Boolean)
 							.join(" · ") || undefined,
 					imageUrl: data.product.image,
+					searchQuery: activeQuery,
 				},
 				Boolean(user),
 			);
@@ -336,6 +337,7 @@ function ComparePageContent() {
 							.filter(Boolean)
 							.join(" · ") || undefined,
 					imageUrl: data.product.image,
+					searchQuery: activeQuery,
 				}),
 			});
 			await mutate("/api/alerts");

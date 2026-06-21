@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
   for (const alert of alerts) {
     try {
-      const result = await compareService.compare(alert.product_id, alert.city)
+      const result = await compareService.compareByProductId(alert.product_id, alert.city)
       const lowestPrice = result.retailers[0]?.price
       if (!lowestPrice) continue
 

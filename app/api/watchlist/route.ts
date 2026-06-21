@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { cacheDel, cacheGet, cacheSetex } from '@/lib/redis/client'
-import { keys, TTL } from '@/lib/redis/keys'
+import { shouldUseMockData } from '@/lib/runtime/mockMode'
 import type { WatchlistPageItem } from '@/types'
 
 const MOCK_WATCHLIST: WatchlistPageItem[] = [
@@ -34,12 +33,13 @@ const MOCK_WATCHLIST: WatchlistPageItem[] = [
 ]
 
 const PostBodySchema = z.object({
-  productId: z.string().min(1),
-  city:      z.string().min(1).default('mumbai'),
-  title:     z.string().min(1).optional(),
-  category:  z.string().optional(),
-  subtitle:  z.string().optional(),
-  imageUrl:  z.string().optional(),
+  productId:   z.string().min(1),
+  city:        z.string().min(1).default('mumbai'),
+  title:       z.string().min(1).optional(),
+  category:    z.string().optional(),
+  subtitle:    z.string().optional(),
+  imageUrl:    z.string().optional(),
+  searchQuery: z.string().min(1).optional(),
 })
 
 const DeleteQuerySchema = z.object({
@@ -62,17 +62,10 @@ export async function GET() {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const cacheKey = keys.watchlist(user.id)
-  const cached = await cacheGet<WatchlistPageItem[]>(cacheKey)
-  if (cached) {
-    const response = NextResponse.json(cached)
-    response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
-    return response
-  }
-
   const { watchlistService } = await import('@/services/watchlistService')
-  const items = await watchlistService.getWatchlist(user.id)
-  await cacheSetex(cacheKey, TTL.watchlist, items)
+  const items = shouldUseMockData()
+    ? await watchlistService.getWatchlist(user.id)
+    : await watchlistService.getWatchlistWithLivePrices(user.id)
 
   const response = NextResponse.json(items)
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
@@ -111,18 +104,18 @@ export async function POST(request: Request) {
   const { productsService } = await import('@/services/productsService')
   const { normalizeProductCategory } = await import('@/lib/utils/productCategory')
 
-  const { productId, city, title, category, subtitle, imageUrl } = parsed.data
+  const { productId, city, title, category, subtitle, imageUrl, searchQuery } = parsed.data
   await productsService.upsertProduct({
-    id:       productId,
-    title:    title ?? productId,
-    category: category ?? normalizeProductCategory('electronics'),
+    id:          productId,
+    title:       title ?? productId,
+    category:    category ?? normalizeProductCategory('electronics'),
     subtitle,
     imageUrl,
+    searchQuery,
   })
 
   const { watchlistService } = await import('@/services/watchlistService')
   const result = await watchlistService.addToWatchlist(user.id, productId, city)
-  await cacheDel(keys.watchlist(user.id))
 
   const response = NextResponse.json(result, { status: 201 })
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
@@ -153,7 +146,6 @@ export async function DELETE(request: Request) {
 
   const { watchlistService } = await import('@/services/watchlistService')
   await watchlistService.removeFromWatchlist(parsed.data.id, user.id)
-  await cacheDel(keys.watchlist(user.id))
 
   const response = NextResponse.json({ success: true })
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)

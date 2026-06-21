@@ -1,5 +1,8 @@
+import { normalizeQuery } from '@/lib/utils/format'
+
 export const keys = {
-  compare:   (productId: string, city: string) => `compare:${productId}:${city}`,
+  compare:      (productId: string, city: string) => `compare:${productId}:${city}`,
+  compareQuery: (query: string, city: string)     => `compare:q:${normalizeQuery(query).toLowerCase()}:${city}`,
   trending:  (city: string)                     => `trending:${city}`,
   trips:     (from: string, to: string, city: string) => `trips:${from}:${to}:${city}`,
   watchlist: (userId: string)                   => `watchlist:${userId}`,

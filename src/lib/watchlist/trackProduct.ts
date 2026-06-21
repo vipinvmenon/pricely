@@ -8,6 +8,7 @@ export type TrackProductPayload = {
   category?: string
   subtitle?: string
   imageUrl?: string
+  searchQuery?: string
 }
 
 export async function trackProduct(
@@ -15,12 +16,13 @@ export async function trackProduct(
   isAuthenticated: boolean,
 ): Promise<'synced' | 'pending'> {
   const item = {
-    productId: payload.productId,
-    city:      payload.city,
-    title:     payload.title,
-    category:  payload.category,
-    subtitle:  payload.subtitle,
-    imageUrl:  payload.imageUrl,
+    productId:   payload.productId,
+    city:        payload.city,
+    title:       payload.title,
+    category:    payload.category,
+    subtitle:    payload.subtitle,
+    imageUrl:    payload.imageUrl,
+    searchQuery: payload.searchQuery,
   }
 
   if (!isSupabaseConfigured()) {

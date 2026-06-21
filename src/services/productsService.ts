@@ -6,6 +6,7 @@ export type UpsertProductInput = {
   category: string
   subtitle?: string
   imageUrl?: string
+  searchQuery?: string
 }
 
 export async function upsertProduct(input: UpsertProductInput): Promise<void> {
@@ -16,12 +17,13 @@ export async function upsertProduct(input: UpsertProductInput): Promise<void> {
   const supabase = createServiceClient()
   const { error } = await supabase.from('products').upsert(
     {
-      id:         input.id,
-      title:      input.title,
-      category:   input.category,
-      subtitle:   input.subtitle ?? null,
-      image_url:  input.imageUrl ?? null,
-      updated_at: new Date().toISOString(),
+      id:           input.id,
+      title:        input.title,
+      category:     input.category,
+      subtitle:     input.subtitle ?? null,
+      image_url:    input.imageUrl ?? null,
+      search_query: input.searchQuery ?? null,
+      updated_at:   new Date().toISOString(),
     },
     { onConflict: 'id' },
   )
@@ -29,4 +31,19 @@ export async function upsertProduct(input: UpsertProductInput): Promise<void> {
   if (error) throw error
 }
 
-export const productsService = { upsertProduct }
+export async function getSearchQuery(productId: string): Promise<string | null> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return null
+
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('products')
+    .select('search_query')
+    .eq('id', productId)
+    .maybeSingle()
+
+  const searchQuery = (data as { search_query: string | null } | null)?.search_query
+  return searchQuery?.trim() || null
+}
+
+export const productsService = { upsertProduct, getSearchQuery }

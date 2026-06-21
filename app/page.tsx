@@ -872,6 +872,10 @@ export default function HomePage() {
 	const { data: watchlistData } = useSWR<WatchlistPageItem[]>(
 		ready && user ? "/api/watchlist" : null,
 		(url: string) => fetchJson<WatchlistPageItem[]>(url),
+		{
+			refreshInterval: 0,
+			revalidateOnFocus: false,
+		},
 	);
 
 	function handleSearch(e: FormEvent) {
