@@ -1,60 +1,183 @@
 # Pricely
 
-Real-time price comparison across Indian commerce platforms.
+**Never overpay again.**
 
-Pricely helps users search for products or trips and instantly compare live prices, ETAs, and savings across multiple apps — grocery, electronics, and cab fares. The goal is quick, confident buy-now vs wait decisions.
+Pricely is a buy-timing intelligence engine for Indian shoppers. It tracks prices across seven major retailers — Amazon, Flipkart, Croma, Reliance Digital, Vijay Sales, Tata Cliq, and Myntra — and answers one question with confidence:
 
-## Stack
+> **Buy now, or wait?**
+
+Not another deals feed. Not a coupon aggregator. A decision engine for purchases where timing actually matters — phones, laptops, sneakers, watches, appliances, and everything in between.
+
+---
+
+## The problem
+
+Indian ecommerce is a maze of flash sales, fake discounts, and platform-specific pricing. The same iPhone can swing ₹8,000 in a week. Flipkart's "Big Billion Days" isn't always the best day. Amazon's "deal" might still be ₹2,000 above last month's low.
+
+Most shoppers either buy too early and regret it, or wait too long and miss the window. There's no single place that watches the price *for you* and tells you when the moment is right.
+
+## The idea
+
+Pricely watches the price of anything you want to buy — logs it daily, learns the pattern, compares across retailers — and surfaces a clear verdict backed by 90-day price history.
+
+```
+  You search          Pricely tracks           You decide
+  ───────────    →    ──────────────    →    ───────────
+  "iPhone 16"         7 retailers              Buy now
+                      daily price logs         or wait
+                      sale-cycle patterns      (with reason)
+```
+
+**Track** what you want. **Watch** how the price moves. **Decide** with data, not guesswork.
+
+---
+
+## How it works
+
+| Step | What happens |
+|------|--------------|
+| **01 — Track** | Search any product or add it to your watchlist. Pricely starts monitoring every retailer that sells it. |
+| **02 — Watch** | Prices are logged continuously. The engine learns sale cycles, drops, restocks, and cross-platform spreads. |
+| **03 — Decide** | A verdict engine analyses 90 days of history and tells you: buy now, wait, or set a target price alert. Always with the reason. |
+
+---
+
+## What you get
+
+| Feature | Description |
+|---------|-------------|
+| **Compare** | Live prices across all seven retailers in one view — with the cheapest option highlighted. |
+| **Verdict** | Rule-based buy/wait signal with GPT-4o-mini fallback for edge cases. No black box. |
+| **Price history** | Interactive chart showing how a product's price has moved over time. |
+| **Watchlist** | Save products you're considering. Sign in to sync across devices. |
+| **Alerts** | Set a target price. Get an email the moment it drops. Checked every 5 minutes. |
+| **Trending** | See what other shoppers are tracking right now. |
+
+---
+
+## Retailer coverage
+
+| Platform | Categories | Data source |
+|----------|------------|-------------|
+| Amazon | Electronics, appliances | PA API v5 → Playwright fallback |
+| Flipkart | Electronics, appliances | Affiliate API → Playwright fallback |
+| Croma | Electronics, appliances | Playwright |
+| Reliance Digital | Electronics, appliances | Playwright |
+| Vijay Sales | Electronics, appliances | Magento GraphQL |
+| Tata Cliq | Electronics, fashion | Playwright |
+| Myntra | Fashion, sneakers, watches | Playwright |
+
+All seven scrapers are built and validated. Affiliate APIs are used where available; Playwright handles the rest on a dedicated Railway service.
+
+---
+
+## Architecture
+
+Pricely is a modern full-stack web app with a separate scraper microservice — Playwright can't run on Vercel serverless, so scraping lives on Railway.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Vercel — Next.js 16 + React 19                       │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐             │
+│  │  Pages   │  │ API routes│  │  Cron    │             │
+│  │  Compare │  │  /compare │  │  Alerts  │             │
+│  │  Watchlist│ │  /verdict │  │  (5 min) │             │
+│  └──────────┘  └──────────┘  └──────────┘             │
+│         │            │                │                 │
+│         ▼            ▼                ▼                 │
+│    Supabase     Upstash Redis      Resend email         │
+│    (Auth + DB)  (price cache)      (alert delivery)     │
+└────────────────────────┬────────────────────────────────┘
+                         │ SCRAPER_SERVICE_URL
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  Railway — Express + Playwright                         │
+│  7 retailer scrapers · stealth browser · proxy support  │
+└─────────────────────────────────────────────────────────┘
+```
 
 | Layer | Technology |
-|---|---|
-| Framework | Next.js 16, React 19, TypeScript strict |
-| Package manager | pnpm |
-| Styling | CSS design tokens + Tailwind utilities |
-| Animation | Framer Motion |
-| Data fetching | SWR (`refreshInterval: 300s`) |
+|-------|------------|
+| Framework | Next.js 16, React 19, TypeScript (strict) |
+| Styling | CSS design tokens + Tailwind |
+| Data fetching | SWR (5-minute refresh) |
 | Validation | Zod on every API route |
-| Auth + Database | Supabase (PostgreSQL + RLS) |
+| Auth + database | Supabase (PostgreSQL + RLS) |
 | Cache | Upstash Redis |
+| Email | Resend |
+| AI verdict fallback | GPT-4o-mini |
+| Charts | Recharts |
 | App hosting | Vercel |
-| Scraper service | Railway (separate Node.js + Playwright process) |
+| Scraper hosting | Railway |
 
-## Project Structure
+---
 
-```
-app/                  Next.js App Router pages and API routes
-src/
-  components/ui/      Shared UI primitives
-  lib/                Redis, Supabase, SWR, fetch utilities
-  services/           Business logic (compare, watchlist, alerts, verdict…)
-  styles/             CSS design tokens (tokens.css)
-  types/              Shared TypeScript types (index.ts)
-scraper/              Railway microservice — Express + Playwright scrapers
-  scrapers/           Per-platform retail scrapers (12 platforms)
-  scrapers/cabs/      Per-platform cab scrapers (4 platforms)
-supabase/             schema.sql DDL
-docs/design/          Read-only design reference artifacts
-```
+## Project status
 
-## Local Development
+| Area | Status |
+|------|--------|
+| Home, Compare, Watchlist, Alerts pages | Done |
+| Auth (email + Google OAuth) | Done |
+| Verdict engine + price history chart | Done |
+| Alert cron + email delivery | Done |
+| 7/7 retailer scrapers | Done — validated locally |
+| Thin beta (production deploy, stable product IDs) | In progress |
+
+See [`PROGRESS.md`](PROGRESS.md) for the full status tracker and [`NEXT_PHASE.md`](NEXT_PHASE.md) for what's next.
+
+---
+
+## For developers
+
+### Quick start
 
 **Requirements:** Node.js ≥ 20, pnpm
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Start dev server (no credentials needed — all routes use mock fallbacks)
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-No environment variables are needed for local development. All API routes automatically return mock data when `SCRAPER_SERVICE_URL` and `NEXT_PUBLIC_SUPABASE_URL` are not set.
+No credentials needed — all API routes return mock data when `SCRAPER_SERVICE_URL` and `NEXT_PUBLIC_SUPABASE_URL` are unset. For live prices:
 
-## Environment Variables
+```bash
+# Terminal 1 — scraper service
+cd scraper && pnpm install && pnpm dev
 
-### Vercel (Next.js app)
+# Terminal 2 — app with live data
+PRICELY_USE_MOCK_DATA=0 pnpm dev
+```
+
+### Project structure
+
+```
+app/                  Next.js App Router — pages and API routes
+src/
+  components/ui/      Shared UI primitives
+  lib/                Redis, Supabase, SWR, fetch utilities
+  services/           Compare, watchlist, alerts, verdict logic
+  styles/             Design tokens (tokens.css)
+  types/              Shared TypeScript contracts
+scraper/              Railway microservice — Express + Playwright
+supabase/             Schema and migrations
+docs/design/          Design reference artifacts (read-only)
+```
+
+### Commands
+
+```bash
+pnpm dev            # Start Next.js dev server
+pnpm build          # Production build
+pnpm lint           # ESLint
+pnpm tsc --noEmit   # Type check
+```
+
+### Environment variables
+
+<details>
+<summary><strong>Vercel (Next.js app)</strong></summary>
 
 ```bash
 # Supabase
@@ -89,7 +212,10 @@ RESEND_API_KEY=re_...
 CRON_SECRET=<random_32_char_secret>
 ```
 
-### Railway (scraper service)
+</details>
+
+<details>
+<summary><strong>Railway (scraper service)</strong></summary>
 
 ```bash
 SCRAPER_SERVICE_SECRET=<same as above>
@@ -101,62 +227,27 @@ FLIPKART_AFFILIATE_TOKEN=<token>
 PORT=3001
 ```
 
-## Scraper Service
-
-The scraper runs as a separate persistent Node.js process on Railway because Playwright cannot run on Vercel serverless functions.
-
-```bash
-# From repo root
-cd scraper
-pnpm install
-pnpm dev          # tsx watch mode
-pnpm build        # tsc → dist/
-pnpm start        # node dist/index.js
-```
-
 Health check: `GET /health` → `{ "ok": true }`
 
-## Commands
+</details>
 
-```bash
-pnpm dev            # Start Next.js dev server
-pnpm build          # Production build
-pnpm lint           # ESLint
-pnpm tsc --noEmit   # Type check
-```
+### Deployment
 
-## Platform Coverage
+- **Vercel** — push to `main`, auto-deploys
+- **Railway** — push to `main`, builds via `railway.toml`
 
-| Platform | Category | Approach |
-|---|---|---|
-| Amazon | Electronics | PA API v5 → Playwright fallback |
-| Flipkart | Electronics | Affiliate API → Playwright fallback |
-| Croma | Electronics | Playwright |
-| Reliance Digital | Electronics | Playwright |
-| Vijay Sales | Electronics | Playwright |
-| Tata Cliq | Electronics | Playwright (SPA) |
-| Myntra | Fashion | Playwright (fashion queries only) |
-| Blinkit | Grocery | Playwright (location-gated) |
-| Zepto | Grocery | Playwright (pincode-gated) |
-| Swiggy Instamart | Grocery | Playwright (city-aware) |
-| BigBasket | Grocery | Playwright |
-| DMart Ready | Grocery | Playwright (Mumbai/Pune/Bangalore/Hyderabad only) |
-| BluSmart | Cabs | Playwright + haversine estimate fallback |
-| Rapido | Cabs | Playwright + haversine estimate fallback |
-| Uber | Cabs | Playwright + haversine estimate fallback |
-| Ola | Cabs | Playwright + haversine estimate fallback |
+---
 
-## Deployment
+## Design
 
-See `LAUNCH_CHECKLIST.md` for the full pre-launch verification checklist.
+Pricely uses a dark, data-forward visual language — monospace accents, glass plates, and a single green accent for savings signals. The design system is contract-driven:
 
-- **Vercel:** push to `main` — Vercel auto-deploys
-- **Railway:** push to `main` — Railway builds via `railway.toml`
+- Token contract: [`docs/design/design-system-contract.md`](docs/design/design-system-contract.md)
+- Visual reference: [`docs/design/pricely-design-system.html`](docs/design/pricely-design-system.html) (open in browser)
 
-## Design Governance
+---
 
-- Token contract: `docs/design/design-system-contract.md` (read-only)
-- Visual reference: `docs/design/pricely-design-system.html` (open in browser)
-- Agent rules: `.cursor/rules/*.mdc`
-- Implementation spec: `BACKEND_EXEC.md`
-- Progress tracking: `PROGRESS.md`
+<p align="center">
+  <strong>Pricely</strong> — price intelligence for Indian shoppers.<br>
+  <em>Buy now, or wait. Always with the reason.</em>
+</p>
