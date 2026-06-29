@@ -2,10 +2,10 @@ import { scraperClient } from '@/lib/scraper/client'
 import { cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
 import { shouldUseMockData } from '@/lib/runtime/mockMode'
-import { PLATFORMS } from '@/lib/utils/platforms'
-import type { PriceResult, PlatformId, ScrapeResult } from '@/types'
+import { platformName, SUPPORTED_PLATFORM_IDS } from '@/lib/utils/platforms'
+import type { PriceResult, ScrapeResult } from '@/types'
 
-const ALL_PLATFORMS: PlatformId[] = ['amazon', 'flipkart', 'croma', 'reliance_digital', 'vijay_sales', 'tata_cliq', 'myntra']
+const ALL_PLATFORMS = SUPPORTED_PLATFORM_IDS
 
 const MOCK_SEARCH_RESULTS: PriceResult[] = [
   { platformId: 'amazon',   platformName: 'Amazon',   category: 'electronics', price: 23450, mrp: 29990, updatedAt: new Date().toISOString(), url: '#' },
@@ -21,7 +21,7 @@ function normaliseAndRank(raw: ScrapeResult[]): PriceResult[] {
     if (!existing || r.price < existing.price) {
       seen.set(key, {
         platformId:   r.platformId,
-        platformName: PLATFORMS[r.platformId]?.name ?? String(r.platformId),
+        platformName: platformName(r.platformId),
         category:     'electronics',
         price:        r.price,
         mrp:          r.mrp,

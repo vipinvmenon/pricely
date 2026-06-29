@@ -13,6 +13,17 @@ export type Verdict = {
   reason: string
 }
 
+/* ── API response wrappers ── */
+
+export type VerdictResponse = {
+  verdict: Verdict
+}
+
+export type CronResult = {
+  processed: number
+  triggered: number
+}
+
 export type PriceResult = {
   platformId: PlatformId
   platformName: string

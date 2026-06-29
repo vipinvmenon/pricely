@@ -8,7 +8,8 @@ const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono'
 
 export const metadata: Metadata = {
   title: 'Pricely — Never overpay again',
-  description: 'Real-time price comparison across 12 Indian retailers.',
+  description:
+    'Compare live prices across Amazon, Flipkart, Croma, Reliance Digital, Vijay Sales, Tata Cliq and Myntra — and get a clear buy or wait verdict.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

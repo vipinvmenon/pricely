@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { citySchema, invalidParams, serviceRoleMissing, unauthorized } from '@/lib/api/request'
 import { createClient } from '@/lib/supabase/server'
 import { shouldUseMockData } from '@/lib/runtime/mockMode'
 import type { WatchlistPageItem } from '@/types'
@@ -34,7 +35,7 @@ const MOCK_WATCHLIST: WatchlistPageItem[] = [
 
 const PostBodySchema = z.object({
   productId:   z.string().min(1),
-  city:        z.string().min(1).default('mumbai'),
+  city:        citySchema,
   title:       z.string().min(1).optional(),
   category:    z.string().optional(),
   subtitle:    z.string().optional(),
@@ -59,7 +60,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    return unauthorized()
   }
 
   const { watchlistService } = await import('@/services/watchlistService')
@@ -76,29 +77,23 @@ export async function POST(request: Request) {
   const start = Date.now()
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    return unauthorized()
   }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    return unauthorized()
   }
 
   const body = await request.json().catch(() => ({}))
   const parsed = PostBodySchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'invalid_params', issues: parsed.error.issues },
-      { status: 400 },
-    )
+    return invalidParams(parsed.error.issues)
   }
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
-    return NextResponse.json(
-      { error: 'service_role_not_configured', message: 'Add SUPABASE_SERVICE_ROLE_KEY to .env.local' },
-      { status: 503 },
-    )
+    return serviceRoleMissing()
   }
 
   const { productsService } = await import('@/services/productsService')
@@ -126,22 +121,19 @@ export async function DELETE(request: Request) {
   const start = Date.now()
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    return unauthorized()
   }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    return unauthorized()
   }
 
   const { searchParams } = new URL(request.url)
   const parsed = DeleteQuerySchema.safeParse({ id: searchParams.get('id') })
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'invalid_params', issues: parsed.error.issues },
-      { status: 400 },
-    )
+    return invalidParams(parsed.error.issues)
   }
 
   const { watchlistService } = await import('@/services/watchlistService')

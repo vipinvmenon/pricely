@@ -9,17 +9,37 @@
   --accent: #1ED760;
   --accent-dim: rgba(30, 215, 96, 0.15);
   --accent-border: rgba(30, 215, 96, 0.35);
+  /* Contract alias — semantic accent fill */
+  --accent-soft: var(--accent-dim);
 
   /* ── Text ── */
   --text: #F4F4F6;
   --text-dim: #8A8F98;
   --text-faint: #4A4F58;
+  /* Contract aliases — text roles */
+  --text-primary: var(--text);
+  --text-secondary: var(--text-dim);
+  --text-muted: var(--text-faint);
 
   /* ── Semantic ── */
   --save: #1ED760;
   --warn: #F5A623;
   --danger: #F05252;
   --low-stock: #F5A623;
+  --save-soft: rgba(30,215,96,0.06);
+  --warn-soft: rgba(245,166,35,0.06);
+  --danger-soft: rgba(240,82,82,0.10);
+  --danger-border: rgba(240,82,82,0.30);
+  /* Contract aliases — state colors */
+  --success: var(--save);
+  --warning: var(--warn);
+  --info: #4DA3FF;
+
+  /* ── Lines / hairlines ── */
+  --line: rgba(255,255,255,0.06);
+  --line-strong: rgba(255,255,255,0.10);
+  /* Contract alias */
+  --line-subtle: var(--line);
 
   /* ── Glass surfaces ── */
   --glass-plate-bg: rgba(255,255,255,0.04);
@@ -31,6 +51,11 @@
 
   --glass-solid-bg: rgba(20,22,26,0.85);
   --glass-solid-border: rgba(255,255,255,0.10);
+
+  /* Contract aliases — canonical glass token names */
+  --glass: var(--glass-plate-bg);
+  --glass-strong: var(--glass-strong-bg);
+  --glass-border: var(--glass-plate-border);
 
   /* ── Radius scale ── */
   --r-xs: 8px;
@@ -54,6 +79,10 @@
   --font-display: 'Geist', -apple-system, system-ui, sans-serif;
   --font-body: 'Geist', -apple-system, system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
+  /* Contract aliases — font roles */
+  --f-display: var(--font-display);
+  --f-text: var(--font-body);
+  --f-mono: var(--font-mono);
 
   /* ── Shadows ── */
   --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3);

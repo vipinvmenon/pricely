@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Glass } from '@/components/ui/Glass'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
-import { signInWithGoogle } from '@/lib/supabase/authRedirect'
+import { getGoogleLoginPath } from '@/lib/supabase/authRedirect'
 import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from '@/lib/supabase/config'
 
 const authAvailable = isSupabaseConfigured()
@@ -20,9 +20,9 @@ function CheckIcon() {
 }
 
 const BULLETS = [
-  'Track prices across 12 Indian retailers in real time',
+  'Compare prices across 7 Indian retailers in one view',
   'Set target prices and get notified the moment they drop',
-  'Price history, buy signals, and trend forecasts — all free',
+  'Price history and a clear buy-or-wait verdict — all free',
 ]
 
 function GoogleIcon() {
@@ -67,24 +67,14 @@ export default function SignUpPage() {
     }
   }
 
-  async function handleGoogleSignIn() {
+  function handleGoogleSignIn() {
     if (!authAvailable) {
       setError(SUPABASE_SETUP_HINT)
       return
     }
     setError(null)
     setLoading(true)
-    try {
-      const supabase = createClient()
-      const { error: authError } = await signInWithGoogle(supabase, '/watchlist')
-      if (authError) {
-        setError(authError.message)
-        setLoading(false)
-      }
-    } catch {
-      setError('Could not start Google sign-in. Try again.')
-      setLoading(false)
-    }
+    window.location.assign(getGoogleLoginPath('/watchlist'))
   }
 
   if (confirmed) {
@@ -127,7 +117,7 @@ export default function SignUpPage() {
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'radial-gradient(ellipse 70% 50% at 10% 50%, rgba(30,215,96,0.06) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse 70% 50% at 10% 50%, var(--save-soft) 0%, transparent 70%)',
             pointerEvents: 'none',
           }}
         />
@@ -173,8 +163,8 @@ export default function SignUpPage() {
               maxWidth: 440,
             }}
           >
-            Join 2.1 million people who never overpay on electronics, groceries, and cab rides across
-            India.
+            Stop overpaying on electronics and fashion. Pricely tracks the price across India&apos;s
+            major retailers and tells you when to buy.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -195,7 +185,7 @@ export default function SignUpPage() {
           alignItems: 'center',
           justifyContent: 'center',
           padding: 'clamp(40px, 6vw, 80px)',
-          borderLeft: '1px solid rgba(255,255,255,0.06)',
+          borderLeft: '1px solid var(--line)',
         }}
       >
         <Glass
@@ -241,13 +231,13 @@ export default function SignUpPage() {
           {error && (
             <div
               style={{
-                background: 'rgba(255,59,48,0.1)',
-                border: '1px solid rgba(255,59,48,0.3)',
+                background: 'var(--danger-soft)',
+                border: '1px solid var(--danger-border)',
                 borderRadius: 'var(--r-md)',
                 padding: '10px 14px',
                 marginBottom: 16,
                 fontSize: '0.875rem',
-                color: 'var(--danger, #ff3b30)',
+                color: 'var(--danger)',
               }}
             >
               {error}

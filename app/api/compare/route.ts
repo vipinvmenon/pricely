@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { invalidParams, resolveCity } from '@/lib/api/request'
 import { shouldUseMockData } from '@/lib/runtime/mockMode'
 import type { CompareResponse } from '@/types'
 
 const QuerySchema = z.object({
-  q:    z.string().min(1).max(200),
-  city: z.string().default('mumbai'),
+  q: z.string().min(1).max(200),
 })
 
 function generateHistory() {
@@ -45,15 +45,11 @@ export async function GET(request: Request) {
   const start = Date.now()
   const { searchParams } = new URL(request.url)
   const parsed = QuerySchema.safeParse({
-    q:    searchParams.get('q') ?? undefined,
-    city: searchParams.get('city') ?? undefined,
+    q: searchParams.get('q') ?? undefined,
   })
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'invalid_params', issues: parsed.error.issues },
-      { status: 400 },
-    )
+    return invalidParams(parsed.error.issues)
   }
 
   if (shouldUseMockData() || !process.env.SCRAPER_SERVICE_URL) {
@@ -66,8 +62,8 @@ export async function GET(request: Request) {
     const { compareService } = await import('@/services/compareService')
     const { verdictService } = await import('@/services/verdictService')
 
-    const { q, city } = parsed.data
-    const result = await compareService.compare(q, city)
+    const city = resolveCity(request, searchParams.get('city'))
+    const result = await compareService.compare(parsed.data.q, city)
     result.verdict = await verdictService.computeVerdict(result.history)
 
     const response = NextResponse.json(result)

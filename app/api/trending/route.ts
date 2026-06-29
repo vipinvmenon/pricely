@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server'
-import { z } from 'zod'
+import { resolveCity } from '@/lib/api/request'
 import { cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
 import type { TrendingItem } from '@/types'
-
-const QuerySchema = z.object({
-  city: z.string().default('mumbai'),
-})
 
 const MOCK_TRENDING: TrendingItem[] = [
   { id: 'sony-wh-1000xm5',           query: 'Sony WH-1000XM5',       category: 'electronics' },
@@ -19,16 +15,7 @@ const MOCK_TRENDING: TrendingItem[] = [
 export async function GET(request: Request) {
   const start = Date.now()
   const { searchParams } = new URL(request.url)
-  const parsed = QuerySchema.safeParse({ city: searchParams.get('city') ?? undefined })
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'invalid_params', issues: parsed.error.issues },
-      { status: 400 },
-    )
-  }
-
-  const { city } = parsed.data
+  const city = resolveCity(request, searchParams.get('city'))
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
     const response = NextResponse.json(MOCK_TRENDING)

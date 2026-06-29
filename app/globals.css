@@ -12,7 +12,22 @@ html, body {
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-::selection { background: rgba(30,215,96,0.25); }
+::selection { background: var(--accent-dim); }
+
+/* Keyboard focus affordance — required on all interactive controls. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+/* Don't show the ring for mouse/touch interactions. */
+:focus:not(:focus-visible) { outline: none; }
 
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .strike { text-decoration: line-through; color: var(--text-faint); }

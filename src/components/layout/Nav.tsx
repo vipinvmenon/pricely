@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Button } from "./Button";
+import { Button } from "@/components/ui/Button";
 import { useSupabaseUser } from "@/lib/hooks/useSupabaseUser";
 
 const NAV_LINKS = [
@@ -31,25 +31,6 @@ function BarChartIcon() {
 			<rect x="7" y="6" width="3" height="12" rx="1" fill="var(--accent)" />
 			<rect x="12" y="10" width="3" height="8" rx="1" fill="var(--accent)" />
 			<rect x="17" y="13" width="3" height="5" rx="1" fill="var(--accent)" />
-		</svg>
-	);
-}
-
-function MoonIcon() {
-	return (
-		<svg
-			width="16"
-			height="16"
-			viewBox="0 0 16 16"
-			fill="none"
-			xmlns="http://www.w3.org/2000/svg"
-		>
-			<path
-				d="M13.5 9.5A6 6 0 1 1 6.5 2.5a4.5 4.5 0 0 0 7 7z"
-				stroke="currentColor"
-				strokeWidth="1.5"
-				strokeLinejoin="round"
-			/>
 		</svg>
 	);
 }
@@ -115,7 +96,7 @@ export function Nav() {
 					height: 64,
 					zIndex: 100,
 					background: "var(--bg0)",
-					borderBottom: "1px solid rgba(255,255,255,0.06)",
+					borderBottom: "1px solid var(--line)",
 					display: "flex",
 					alignItems: "center",
 					padding: "0 24px",
@@ -159,7 +140,7 @@ export function Nav() {
 						style={{
 							display: "flex",
 							alignItems: "center",
-							border: "1px solid rgba(255,255,255,0.10)",
+							border: "1px solid var(--line-strong)",
 							borderRadius: "var(--r-pill)",
 							padding: "3px",
 							gap: 2,
@@ -173,6 +154,7 @@ export function Nav() {
 									key={href}
 									href={href}
 									prefetch={shouldPrefetch(href)}
+									aria-current={isActive ? "page" : undefined}
 									style={{
 										display: "inline-flex",
 										alignItems: "center",
@@ -206,22 +188,6 @@ export function Nav() {
 					}}
 					className="nav-actions-desktop"
 				>
-					<button
-						style={{
-							background: "var(--glass-plate-bg)",
-							border: "1px solid var(--glass-plate-border)",
-							borderRadius: "var(--r-pill)",
-							color: "var(--text-dim)",
-							padding: "8px",
-							cursor: "pointer",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-						}}
-						aria-label="Toggle theme"
-					>
-						<MoonIcon />
-					</button>
 					{showSignedIn ? (
 						<>
 							<span
@@ -266,7 +232,8 @@ export function Nav() {
 						border: "none",
 						cursor: "pointer",
 						color: "var(--text)",
-						padding: "8px",
+						width: 44,
+						height: 44,
 						display: "none",
 						alignItems: "center",
 						justifyContent: "center",
@@ -274,6 +241,7 @@ export function Nav() {
 						borderRadius: "var(--r-pill)",
 					}}
 					aria-label="Toggle menu"
+					aria-expanded={mobileOpen}
 				>
 					<MenuIcon />
 				</button>
@@ -290,7 +258,7 @@ export function Nav() {
 						right: 0,
 						zIndex: 99,
 						background: "var(--bg1)",
-						borderBottom: "1px solid rgba(255,255,255,0.06)",
+						borderBottom: "1px solid var(--line)",
 						padding: "12px 16px",
 						display: "flex",
 						flexDirection: "column",
@@ -306,6 +274,7 @@ export function Nav() {
 								href={href}
 								prefetch={shouldPrefetch(href)}
 								onClick={() => setMobileOpen(false)}
+								aria-current={isActive ? "page" : undefined}
 								style={{
 									padding: "12px 16px",
 									borderRadius: "var(--r-md)",
@@ -324,7 +293,7 @@ export function Nav() {
 					<div
 						style={{
 							height: 1,
-							background: "rgba(255,255,255,0.06)",
+							background: "var(--line)",
 							margin: "8px 0",
 						}}
 					/>

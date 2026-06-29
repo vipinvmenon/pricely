@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Glass } from '@/components/ui/Glass'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
-import { getSafeNextPath, signInWithGoogle } from '@/lib/supabase/authRedirect'
+import { getSafeNextPath, getGoogleLoginPath } from '@/lib/supabase/authRedirect'
 import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from '@/lib/supabase/config'
 import { formatAuthError } from '@/lib/utils/authErrors'
 
@@ -22,7 +22,7 @@ function CheckIcon() {
 
 const BULLETS = [
   'Your watchlist and alerts, exactly where you left them',
-  'Price history across 12 retailers, always up to date',
+  'Price history across 7 retailers, always up to date',
   'Instant notifications when your target price drops',
 ]
 
@@ -77,24 +77,14 @@ function SignInForm() {
     }
   }
 
-  async function handleGoogleSignIn() {
+  function handleGoogleSignIn() {
     if (!authAvailable) {
       setError(SUPABASE_SETUP_HINT)
       return
     }
     setError(null)
     setLoading(true)
-    try {
-      const supabase = createClient()
-      const { error: authError } = await signInWithGoogle(supabase, nextPath)
-      if (authError) {
-        setError(formatAuthError(authError.message) ?? authError.message)
-        setLoading(false)
-      }
-    } catch {
-      setError('Could not start Google sign-in. Try again.')
-      setLoading(false)
-    }
+    window.location.assign(getGoogleLoginPath(nextPath))
   }
 
   return (
@@ -123,7 +113,7 @@ function SignInForm() {
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'radial-gradient(ellipse 70% 50% at 10% 50%, rgba(30,215,96,0.06) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse 70% 50% at 10% 50%, var(--save-soft) 0%, transparent 70%)',
             pointerEvents: 'none',
           }}
         />
@@ -168,7 +158,7 @@ function SignInForm() {
               maxWidth: 440,
             }}
           >
-            Pick up where Pricely left off — your watchlist, alerts and saved trips are exactly where you
+            Pick up where Pricely left off — your watchlist and price alerts are exactly where you
             parked them.
           </p>
 
@@ -190,7 +180,7 @@ function SignInForm() {
           alignItems: 'center',
           justifyContent: 'center',
           padding: 'clamp(40px, 6vw, 80px)',
-          borderLeft: '1px solid rgba(255,255,255,0.06)',
+          borderLeft: '1px solid var(--line)',
         }}
       >
         <Glass
@@ -236,13 +226,13 @@ function SignInForm() {
           {error && (
             <div
               style={{
-                background: 'rgba(255,59,48,0.1)',
-                border: '1px solid rgba(255,59,48,0.3)',
+                background: 'var(--danger-soft)',
+                border: '1px solid var(--danger-border)',
                 borderRadius: 'var(--r-md)',
                 padding: '10px 14px',
                 marginBottom: 16,
                 fontSize: '0.875rem',
-                color: 'var(--danger, #ff3b30)',
+                color: 'var(--danger)',
               }}
             >
               {error}

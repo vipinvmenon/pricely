@@ -159,7 +159,11 @@ export function WatchlistRow({
             cursor: 'pointer',
             color: 'var(--text-faint)',
             fontSize: '1rem',
-            padding: '4px',
+            width: 44,
+            height: 44,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             borderRadius: 'var(--r-pill)',
             lineHeight: 1,
           }}

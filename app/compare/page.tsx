@@ -1,16 +1,18 @@
 "use client";
 
-import { FormEvent, Suspense, useEffect, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR, { useSWRConfig } from "swr";
-import { Nav } from "@/components/ui/Nav";
+import { Nav } from "@/components/layout/Nav";
 import { Glass } from "@/components/ui/Glass";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { PriceBadge } from "@/components/ui/PriceBadge";
 import { RetailerRow } from "@/components/ui/RetailerRow";
 import { PriceChart } from "@/components/ui/PriceChart";
+import { SearchBar } from "@/components/ui/SearchBar";
+import { VerdictHero } from "@/components/features/VerdictHero";
 import { DEFAULT_CITY, DEFAULT_COMPARE_QUERY } from "@/lib/constants";
 import { useSupabaseUser } from "@/lib/hooks/useSupabaseUser";
 import { trackProduct } from "@/lib/watchlist/trackProduct";
@@ -18,147 +20,6 @@ import { normalizeProductCategory } from "@/lib/utils/productCategory";
 import { fetchJson } from "@/lib/utils/fetchJson";
 import { formatINR, normalizeQuery } from "@/lib/utils/format";
 import type { CompareResponse, TrendingItem } from "@/types";
-
-function SearchIcon() {
-	return (
-		<svg
-			width="18"
-			height="18"
-			viewBox="0 0 18 18"
-			fill="none"
-			xmlns="http://www.w3.org/2000/svg"
-		>
-			<circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5" />
-			<path
-				d="M13 13l2.5 2.5"
-				stroke="currentColor"
-				strokeWidth="1.5"
-				strokeLinecap="round"
-			/>
-		</svg>
-	);
-}
-
-function VerdictHero({
-	verdict,
-	lowest,
-}: {
-	verdict: { action: "buy" | "wait"; confidence: number; reason: string };
-	lowest: { price: number; name: string } | undefined;
-}) {
-	const isBuy = verdict.action === "buy";
-	const actionColor = isBuy ? "var(--accent)" : "var(--warn)";
-	const confidence =
-		verdict.confidence > 1
-			? Math.round(verdict.confidence)
-			: Math.round(verdict.confidence * 100);
-
-	return (
-		<Glass
-			variant="plate"
-			style={{
-				padding: "var(--sp-8)",
-				marginBottom: 24,
-				borderRadius: "var(--r-xl)",
-				borderLeft: `3px solid ${actionColor}`,
-				background: isBuy
-					? "linear-gradient(135deg, rgba(29,185,84,0.06) 0%, transparent 60%)"
-					: "linear-gradient(135deg, rgba(255,192,98,0.05) 0%, transparent 60%)",
-			}}
-		>
-			<div
-				style={{
-					display: "flex",
-					alignItems: "flex-start",
-					justifyContent: "space-between",
-					gap: 24,
-					flexWrap: "wrap",
-				}}
-			>
-				<div>
-					<div
-						style={{
-							fontFamily: "var(--font-mono)",
-							fontSize: "0.6875rem",
-							letterSpacing: "0.12em",
-							textTransform: "uppercase",
-							color: "var(--text-faint)",
-							marginBottom: 12,
-						}}
-					>
-						Verdict · Price Intelligence
-					</div>
-					<div
-						className="mono"
-						style={{
-							fontSize: "clamp(2.25rem, 5vw, 3.25rem)",
-							fontWeight: 700,
-							color: actionColor,
-							lineHeight: 1,
-							letterSpacing: "-0.03em",
-							marginBottom: 16,
-						}}
-					>
-						{isBuy ? "BUY NOW." : "WAIT."}
-					</div>
-					<p
-						style={{
-							fontSize: "1rem",
-							color: "var(--text-dim)",
-							margin: 0,
-							lineHeight: 1.65,
-							maxWidth: 560,
-						}}
-					>
-						{verdict.reason}
-					</p>
-				</div>
-
-				<div
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						alignItems: "flex-end",
-						gap: 12,
-						flexShrink: 0,
-					}}
-				>
-					{confidence > 0 && (
-						<Chip variant={isBuy ? "active" : "default"} size="sm">
-							{confidence}% confident
-						</Chip>
-					)}
-					{isBuy && lowest && (
-						<div style={{ textAlign: "right" }}>
-							<div
-								style={{
-									fontFamily: "var(--font-mono)",
-									fontSize: "0.6875rem",
-									letterSpacing: "0.08em",
-									textTransform: "uppercase",
-									color: "var(--text-faint)",
-									marginBottom: 6,
-								}}
-							>
-								Lowest now
-							</div>
-							<PriceBadge value={lowest.price} size="lg" />
-							<div
-								style={{
-									fontSize: "0.75rem",
-									color: "var(--text-dim)",
-									marginTop: 4,
-								}}
-							>
-								at {lowest.name}
-							</div>
-						</div>
-					)}
-				</div>
-			</div>
-		</Glass>
-	);
-}
 
 function compareUrl(query: string): string {
 	return `/api/compare?q=${encodeURIComponent(query)}&city=${encodeURIComponent(DEFAULT_CITY)}`;
@@ -233,18 +94,24 @@ function ComparePageContent() {
 	const verdict = data?.verdict;
 	const productId = data?.product.id;
 
-	useEffect(() => {
+	// Reset transient action state when the product changes (adjust-state-during-render).
+	const [trackedProductId, setTrackedProductId] = useState(productId);
+	if (productId !== trackedProductId) {
+		setTrackedProductId(productId);
 		setTrackState("idle");
 		setTrackError(null);
 		setAlertState("idle");
 		setAlertError(null);
-	}, [productId]);
+	}
 
-	useEffect(() => {
-		if (lowest?.price) {
-			setTargetPrice(String(Math.round(lowest.price * 0.95)));
-		}
-	}, [productId, lowest?.price]);
+	// Prefill the target price from the lowest price whenever it changes.
+	const priceKey =
+		productId && lowest?.price ? `${productId}:${lowest.price}` : undefined;
+	const [pricedFor, setPricedFor] = useState<string | undefined>(undefined);
+	if (priceKey && priceKey !== pricedFor) {
+		setPricedFor(priceKey);
+		setTargetPrice(String(Math.round((lowest?.price ?? 0) * 0.95)));
+	}
 
 	function navigateToQuery(raw: string) {
 		const q = normalizeQuery(raw);
@@ -393,41 +260,16 @@ function ComparePageContent() {
 					buying?
 				</h1>
 
-				<form onSubmit={handleSubmit}>
-					<Glass
-						variant="plate"
-						style={{
-							display: "flex",
-							alignItems: "center",
-							borderRadius: "var(--r-pill)",
-							padding: "0 16px",
-							marginBottom: 16,
-						}}
-					>
-						<span style={{ color: "var(--text-faint)", flexShrink: 0 }}>
-							<SearchIcon />
-						</span>
-						<input
-							type="text"
-							value={inputQuery}
-							onChange={(e) => setInputQuery(e.target.value)}
-							placeholder="Search for any product…"
-							style={{
-								flex: 1,
-								background: "none",
-								border: "none",
-								outline: "none",
-								color: "var(--text)",
-								fontSize: "1rem",
-								fontFamily: "inherit",
-								padding: "16px 12px",
-							}}
-						/>
-						<Button variant="primary" size="md" type="submit">
-							Compare
-						</Button>
-					</Glass>
-				</form>
+				<div style={{ marginBottom: 16 }}>
+					<SearchBar
+						value={inputQuery}
+						onChange={setInputQuery}
+						onSubmit={handleSubmit}
+						placeholder="Search for any product…"
+						submitLabel="Compare"
+						ariaLabel="Search products to compare"
+					/>
+				</div>
 
 				<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
 					{trendingQueries.map((q) => (

@@ -170,7 +170,7 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
                 const u = new URL(abs)
                 const target = u.searchParams.get('url')
                 if (target) return base + decodeURIComponent(target).split('?')[0]
-              } catch (_) { /* fall through */ }
+              } catch { /* fall through */ }
             }
             return abs.split('?')[0]
           })(),

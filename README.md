@@ -67,7 +67,7 @@ Pricely watches the price of anything you want to buy — logs it daily, learns 
 | Tata Cliq | Electronics, fashion | Playwright |
 | Myntra | Fashion, sneakers, watches | Playwright |
 
-All seven scrapers are built and validated. Affiliate APIs are used where available; Playwright handles the rest on a dedicated Railway service.
+Affiliate APIs are used where available; Playwright handles the rest on a dedicated Railway service. The app runs fully on mock data when the scraper service and Supabase are not configured, so live coverage depends on your deployment.
 
 ---
 
@@ -114,16 +114,21 @@ Pricely is a modern full-stack web app with a separate scraper microservice — 
 
 ## Project status
 
+Working toward a stable v1. The v1 promise: search a product, compare live or mock
+prices across the seven supported retailers, see a buy/wait verdict, and save to a
+watchlist or alert when signed in.
+
 | Area | Status |
 |------|--------|
-| Home, Compare, Watchlist, Alerts pages | Done |
-| Auth (email + Google OAuth) | Done |
-| Verdict engine + price history chart | Done |
-| Alert cron + email delivery | Done |
-| 7/7 retailer scrapers | Done — validated locally |
-| Thin beta (production deploy, stable product IDs) | In progress |
+| Home, Compare, Watchlist, Alerts pages | Implemented |
+| Auth (email + Google OAuth) | Implemented |
+| Verdict engine + price history chart | Implemented |
+| Alert cron + email delivery | Implemented |
+| 7 retailer scrapers | Implemented (live coverage varies by site and credentials) |
+| Local dev on mock data, no credentials | Supported |
 
-See [`PROGRESS.md`](PROGRESS.md) for the full status tracker and [`NEXT_PHASE.md`](NEXT_PHASE.md) for what's next.
+Deferred to v1.1: city-selector UI, light-theme parity, and additional categories
+(groceries, cabs). See [`PROGRESS.md`](PROGRESS.md).
 
 ---
 

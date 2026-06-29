@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
+import { isServiceRoleConfigured } from '@/lib/supabase/config'
 import type { HistoryPoint, PlatformId } from '@/types'
 
 interface PricePoint {
@@ -9,7 +10,9 @@ interface PricePoint {
 }
 
 export async function writePricePoints(points: PricePoint[]): Promise<void> {
-  // Service role required: price_history RLS blocks anon inserts
+  // Service role required: price_history RLS blocks anon inserts. Without it
+  // (e.g. local dev with no credentials) this is a safe no-op.
+  if (!isServiceRoleConfigured()) return
   const supabase = createServiceClient()
 
   for (const point of points) {
@@ -43,6 +46,7 @@ export async function getPriceHistory(
   city: string,
   days: number,
 ): Promise<HistoryPoint[]> {
+  if (!isServiceRoleConfigured()) return []
   const supabase = createServiceClient()
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
 

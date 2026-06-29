@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import useSWR, { useSWRConfig } from "swr";
-import { Nav } from "@/components/ui/Nav";
+import { Nav } from "@/components/layout/Nav";
 import { Glass } from "@/components/ui/Glass";
 import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";

@@ -79,7 +79,7 @@ export function RetailerRow({
               padding: '2px 8px',
               borderRadius: 'var(--r-pill)',
               background: 'var(--accent)',
-              color: '#0A0A0B',
+              color: 'var(--bg0)',
               flexShrink: 0,
             }}
           >

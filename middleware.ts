@@ -16,11 +16,14 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
+          )
+          Object.entries(headers).forEach(([key, value]) =>
+            supabaseResponse.headers.set(key, value),
           )
         },
       },
@@ -35,7 +38,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Skip /api — routes read cookies directly; avoids duplicate auth work per SWR poll.
+  // Skip /auth/callback and /auth/login — middleware session refresh can clear PKCE cookies.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/|auth/callback|auth/login|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

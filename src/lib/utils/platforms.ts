@@ -15,3 +15,11 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
   myntra:           { id: "myntra",           name: "Myntra" },
 };
 
+/** Canonical list of supported retailer ids — the single source for scrape fan-out. */
+export const SUPPORTED_PLATFORM_IDS = Object.keys(PLATFORMS) as PlatformId[];
+
+/** Display name for a platform id, falling back to the raw id. */
+export function platformName(id: PlatformId | string): string {
+  return PLATFORMS[id as PlatformId]?.name ?? String(id);
+}
+

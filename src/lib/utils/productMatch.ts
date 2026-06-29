@@ -46,11 +46,16 @@ export function scoreProductRelevance(title: string, query: string): number {
   return score
 }
 
-/** Pick the best-matching listing per retailer from scrape candidates. */
+/**
+ * Pick the best-matching listing per retailer from scrape candidates.
+ *
+ * `minScore` defaults to 3 (≈ one fully-matched query token) so weak/accessory
+ * matches don't get written into price history as if they were the product.
+ */
 export function pickBestPerPlatform(
   results: ScrapeResult[],
   query: string,
-  minScore = 1,
+  minScore = 3,
 ): ScrapeResult[] {
   const byPlatform = new Map<PlatformId, ScrapeResult[]>()
 

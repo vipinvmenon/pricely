@@ -1,8 +1,26 @@
 import type { HistoryPoint, Verdict } from '@/types'
 
+/**
+ * Minimum number of price points before the rule engine is allowed to make a
+ * confident call. Below this we only emit cautious, low-confidence signals so
+ * we never tell someone to "buy" with high confidence off a few data points.
+ */
+const MIN_POINTS_FOR_CONFIDENT = 14
+
+/** Confidence ceiling for the ambiguous GPT / no-signal fallback. */
+const FALLBACK_CONFIDENCE_CAP = 0.7
+
 export async function computeVerdict(history: HistoryPoint[]): Promise<Verdict> {
-  if (history.length < 7) {
-    return gptFallback(history)
+  if (history.length === 0) {
+    return {
+      action: 'wait',
+      confidence: 0.2,
+      reason: 'No price history yet — not enough data to make a call.',
+    }
+  }
+
+  if (history.length < MIN_POINTS_FOR_CONFIDENT) {
+    return sparseVerdict(history)
   }
 
   const prices  = history.map((h) => h.price)
@@ -28,9 +46,39 @@ export async function computeVerdict(history: HistoryPoint[]): Promise<Verdict> 
   return gptFallback(history)
 }
 
+/**
+ * Cautious signal for thin history. Confidence is intentionally capped low and
+ * the reason is transparent about how little data we have.
+ */
+function sparseVerdict(history: HistoryPoint[]): Verdict {
+  const prices  = history.map((h) => h.price)
+  const current = prices[prices.length - 1]
+  const min     = Math.min(...prices)
+  const vsMin   = min > 0 ? (current - min) / min : 0
+  const days    = history.length
+
+  if (vsMin <= 0.02) {
+    return {
+      action: 'buy',
+      confidence: 0.4,
+      reason: `Lowest in the ${days} days we've tracked, but that's a short window — treat this as a soft signal.`,
+    }
+  }
+  return {
+    action: 'wait',
+    confidence: 0.3,
+    reason: `Only ${days} days of price history so far — not enough to confidently say buy.`,
+  }
+}
+
 async function gptFallback(history: HistoryPoint[]): Promise<Verdict> {
-  if (!process.env.OPENAI_API_KEY || history.length === 0) {
-    return { action: 'buy', confidence: 0.5, reason: 'Insufficient history — check manually' }
+  // No key, or nothing to reason about: return an honest, low-confidence verdict.
+  if (!process.env.OPENAI_API_KEY?.trim() || history.length === 0) {
+    return {
+      action: 'wait',
+      confidence: 0.3,
+      reason: 'No strong buy-or-wait signal from recent prices.',
+    }
   }
 
   try {
@@ -63,13 +111,22 @@ Rules:
       typeof parsed.confidence === 'number' &&
       typeof parsed.reason === 'string'
     ) {
-      return parsed as Verdict
+      // Rules already failed to find a clear signal, so cap GPT confidence.
+      return {
+        action: parsed.action,
+        confidence: Math.max(0, Math.min(parsed.confidence, FALLBACK_CONFIDENCE_CAP)),
+        reason: parsed.reason,
+      }
     }
   } catch {
     // Fallthrough to default verdict below
   }
 
-  return { action: 'buy', confidence: 0.5, reason: 'Insufficient price history' }
+  return {
+    action: 'wait',
+    confidence: 0.3,
+    reason: 'No strong buy-or-wait signal from recent prices.',
+  }
 }
 
 export const verdictService = { computeVerdict }
