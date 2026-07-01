@@ -1,9 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { applySecurityHeaders } from '@/lib/security/headers'
 
 export async function middleware(request: NextRequest) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return NextResponse.next({ request })
+    return applySecurityHeaders(NextResponse.next({ request }))
   }
 
   let supabaseResponse = NextResponse.next({ request })
@@ -33,7 +34,7 @@ export async function middleware(request: NextRequest) {
   // Refresh session cookie on navigation (no redirects — pages handle auth UX).
   await supabase.auth.getUser()
 
-  return supabaseResponse
+  return applySecurityHeaders(supabaseResponse)
 }
 
 export const config = {
