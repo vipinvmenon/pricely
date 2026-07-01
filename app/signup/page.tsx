@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { getGoogleLoginPath } from '@/lib/supabase/authRedirect'
 import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from '@/lib/supabase/config'
+import { passwordStrengthLabel, passwordValidationError, passwordsMatch } from '@/lib/utils/password'
 
 const authAvailable = isSupabaseConfigured()
 
@@ -41,14 +42,31 @@ export default function SignUpPage() {
   const [fullName, setFullName]         = useState('')
   const [email, setEmail]               = useState('')
   const [password, setPassword]         = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading]           = useState(false)
   const [error, setError]               = useState<string | null>(null)
   const [confirmed, setConfirmed]       = useState(false)
+
+  const strength = passwordStrengthLabel(password)
 
   async function handleEmailSignUp(e: React.FormEvent) {
     e.preventDefault()
     if (!authAvailable) {
       setError(SUPABASE_SETUP_HINT)
+      return
+    }
+    if (!fullName.trim()) {
+      setError('Enter your full name.')
+      return
+    }
+    const validationError = passwordValidationError(password)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    if (!passwordsMatch(password, confirmPassword)) {
+      setError('Passwords do not match.')
       return
     }
     setError(null)
@@ -58,7 +76,7 @@ export default function SignUpPage() {
       const { error: authError } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { display_name: fullName } },
+        options: { data: { display_name: fullName.trim() } },
       })
       if (authError) { setError(authError.message); return }
       setConfirmed(true)
@@ -230,6 +248,7 @@ export default function SignUpPage() {
 
           {error && (
             <div
+              role="alert"
               style={{
                 background: 'var(--danger-soft)',
                 border: '1px solid var(--danger-border)',
@@ -254,6 +273,7 @@ export default function SignUpPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Priya Sharma"
+                required
                 autoComplete="name"
                 disabled={!authAvailable}
                 style={inputStyle}
@@ -280,13 +300,49 @@ export default function SignUpPage() {
               <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-dim)' }}>
                 Password
               </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  required
+                  minLength={8}
+                  disabled={!authAvailable}
+                  autoComplete="new-password"
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </Button>
+              </div>
+              {strength && (
+                <span
+                  style={{
+                    fontSize: '0.8125rem',
+                    color: passwordValidationError(password) ? 'var(--danger)' : 'var(--text-faint)',
+                  }}
+                >
+                  {strength}
+                </span>
+              )}
+            </label>
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-dim)' }}>
+                Confirm password
+              </span>
               <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 8 characters"
+                type={showPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter password"
                 required
-                minLength={8}
                 disabled={!authAvailable}
                 autoComplete="new-password"
                 style={inputStyle}
@@ -295,8 +351,8 @@ export default function SignUpPage() {
 
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-faint)', margin: '4px 0', lineHeight: 1.5 }}>
               By creating an account you agree to our{' '}
-              <a href="#" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Terms</a> and{' '}
-              <a href="#" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Privacy Policy</a>.
+              <Link href="/terms" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Terms</Link> and{' '}
+              <Link href="/privacy" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Privacy Policy</Link>.
             </p>
 
             <Button variant="primary" size="md" fullWidth disabled={loading || !authAvailable}>

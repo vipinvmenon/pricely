@@ -1,4 +1,5 @@
 import express from 'express'
+import { mapWithConcurrency } from './lib/concurrency'
 import type { Request, Response, NextFunction } from 'express'
 import type { Scraper, ScrapeError, ScraperResult } from './types'
 
@@ -25,6 +26,10 @@ const SCRAPER_SECRET = process.env.SCRAPER_SERVICE_SECRET
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 const MAX_QUERY_LENGTH = 200
 const MAX_RESULTS_CAP = 10
+const MAX_PLATFORM_CONCURRENCY = Math.max(
+  1,
+  Number.parseInt(process.env.SCRAPER_PLATFORM_CONCURRENCY ?? '3', 10) || 3,
+)
 
 if (!SCRAPER_SECRET) {
   if (IS_PRODUCTION) {
@@ -86,25 +91,23 @@ app.post('/scrape', async (req: Request, res: Response) => {
   const results: ScraperResult[] = []
   const errors: ScrapeError[] = []
 
-  await Promise.allSettled(
-    platforms.map(async (id) => {
-      const scraper = RETAIL_SCRAPERS[id]
-      if (!VALID_PLATFORMS.has(id) || !scraper) {
-        errors.push({ platformId: id, message: `Unknown platform: ${id}`, retryable: false })
-        return
-      }
-      try {
-        const scraped = await scraper({ query, city, maxResults })
-        results.push(...scraped)
-      } catch (err) {
-        errors.push({
-          platformId: id,
-          message: err instanceof Error ? err.message : String(err),
-          retryable: true,
-        })
-      }
-    }),
-  )
+  await mapWithConcurrency(platforms, MAX_PLATFORM_CONCURRENCY, async (id) => {
+    const scraper = RETAIL_SCRAPERS[id]
+    if (!VALID_PLATFORMS.has(id) || !scraper) {
+      errors.push({ platformId: id, message: `Unknown platform: ${id}`, retryable: false })
+      return
+    }
+    try {
+      const scraped = await scraper({ query, city, maxResults })
+      results.push(...scraped)
+    } catch (err) {
+      errors.push({
+        platformId: id,
+        message: err instanceof Error ? err.message : String(err),
+        retryable: true,
+      })
+    }
+  })
 
   res.json({ results, errors })
 })

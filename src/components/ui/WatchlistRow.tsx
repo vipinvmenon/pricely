@@ -2,6 +2,7 @@
 
 import { formatINR } from '@/lib/utils/format'
 import { SparkLine } from './SparkLine'
+import { Button } from './Button'
 
 type WatchlistStatus = 'Just dropped' | 'Watching' | 'Holding' | 'Target hit'
 
@@ -15,7 +16,10 @@ interface WatchlistRowProps {
   vsTarget: number
   trend: number[]
   status: WatchlistStatus
-  onMenu?: () => void
+  removeConfirming?: boolean
+  onRemoveRequest?: () => void
+  onConfirmRemove?: () => void
+  onCancelRemove?: () => void
 }
 
 const statusColor: Record<WatchlistStatus, string> = {
@@ -35,101 +39,41 @@ export function WatchlistRow({
   vsTarget,
   trend,
   status,
-  onMenu,
+  removeConfirming = false,
+  onRemoveRequest,
+  onConfirmRemove,
+  onCancelRemove,
 }: WatchlistRowProps) {
   const isPositive = vsTarget <= 0
 
   return (
     <div
+      className="watchlist-row"
       style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr auto auto auto auto auto',
-        alignItems: 'center',
-        gap: '16px',
-        padding: '14px 20px',
-        borderRadius: 'var(--r-md)',
         background: status === 'Target hit' ? 'var(--accent-dim)' : 'transparent',
         borderLeft: status === 'Target hit' ? '2px solid var(--accent)' : '2px solid transparent',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 'var(--r-sm)',
-            background: 'var(--bg3)',
-            border: '1px solid var(--glass-plate-border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'var(--font-mono)',
-            fontSize: '0.75rem',
-            color: 'var(--text-dim)',
-            fontWeight: 600,
-            flexShrink: 0,
-          }}
-        >
-          {initials}
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: '0.9375rem',
-              fontWeight: 500,
-              color: 'var(--text)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {name}
-          </div>
-          <div style={{ fontSize: '0.8125rem', color: 'var(--text-dim)' }}>{subtitle}</div>
+      <div className="watchlist-row-product">
+        <div className="watchlist-row-avatar">{initials}</div>
+        <div className="watchlist-row-copy">
+          <div className="watchlist-row-name">{name}</div>
+          <div className="watchlist-row-subtitle">{subtitle}</div>
         </div>
       </div>
 
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.875rem',
-          color: 'var(--text-dim)',
-        }}
-      >
-        {formatINR(target)}
-      </span>
+      <span className="watchlist-row-target mono">{formatINR(target)}</span>
 
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.9375rem',
-          fontWeight: 500,
-          color: 'var(--text)',
-        }}
-      >
+      <span className="watchlist-row-now mono">
         {formatINR(now)}
         {mrp && mrp > now && (
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.75rem',
-              color: 'var(--text-faint)',
-              textDecoration: 'line-through',
-              marginLeft: '6px',
-            }}
-          >
-            {formatINR(mrp)}
-          </span>
+          <span className="watchlist-row-mrp strike">{formatINR(mrp)}</span>
         )}
       </span>
 
       <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.875rem',
-          fontWeight: 600,
-          color: isPositive ? 'var(--save)' : 'var(--danger)',
-        }}
+        className="watchlist-row-vs mono"
+        style={{ color: isPositive ? 'var(--save)' : 'var(--danger)' }}
       >
         {vsTarget > 0 ? '+' : ''}
         {vsTarget}%
@@ -137,40 +81,48 @@ export function WatchlistRow({
 
       <SparkLine data={trend} width={80} height={32} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span
-            style={{
-              display: 'inline-block',
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: statusColor[status],
-              flexShrink: 0,
-            }}
-          />
-          <span style={{ fontSize: '0.8125rem', color: 'var(--text-dim)' }}>{status}</span>
+      <div className="watchlist-row-status">
+        <span
+          className="watchlist-row-status-dot"
+          style={{ background: statusColor[status] }}
+        />
+        <span>{status}</span>
+      </div>
+
+      <div className="watchlist-row-actions">
+        {removeConfirming ? (
+          <div className="row-confirm-actions">
+            <Button variant="ghost" size="sm" type="button" onClick={onCancelRemove}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="sm" type="button" onClick={onConfirmRemove}>
+              Remove
+            </Button>
+          </div>
+        ) : (
+          <Button variant="ghost" size="sm" type="button" onClick={onRemoveRequest}>
+            Remove
+          </Button>
+        )}
+      </div>
+
+      <div className="watchlist-row-mobile-stats">
+        <div>
+          <span className="watchlist-row-mobile-label">Now</span>
+          <div className="mono">{formatINR(now)}</div>
         </div>
-        <button
-          onClick={onMenu}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--text-faint)',
-            fontSize: '1rem',
-            width: 44,
-            height: 44,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 'var(--r-pill)',
-            lineHeight: 1,
-          }}
-          aria-label="More options"
-        >
-          ···
-        </button>
+        <div>
+          <span className="watchlist-row-mobile-label">Target</span>
+          <div className="mono">{formatINR(target)}</div>
+        </div>
+        <div>
+          <span className="watchlist-row-mobile-label">vs target</span>
+          <div className="mono" style={{ color: isPositive ? 'var(--save)' : 'var(--danger)' }}>
+            {vsTarget > 0 ? '+' : ''}
+            {vsTarget}%
+          </div>
+        </div>
+        <SparkLine data={trend} width={72} height={28} />
       </div>
     </div>
   )

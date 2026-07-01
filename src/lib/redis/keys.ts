@@ -6,6 +6,7 @@ export const keys = {
   trending:  (city: string)                     => `trending:${city}`,
   watchlist: (userId: string)                   => `watchlist:${userId}`,
   search:    (query: string, city: string)       => `search:q:${normalizeQuery(query).toLowerCase()}:${city}`,
+  rateLimitCompare: (ip: string)                  => `ratelimit:compare:${ip}`,
 } as const
 
 export const TTL = {

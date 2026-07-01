@@ -1,6 +1,7 @@
 'use client'
 
 import { Chip } from './Chip'
+import { Button } from './Button'
 import { formatINR } from '@/lib/utils/format'
 
 interface AlertRowProps {
@@ -11,7 +12,14 @@ interface AlertRowProps {
   isActive: boolean
   lastTriggeredAt: string | null
   createdAt: string
-  onDelete?: () => void
+  lastDeliveryStatus?: string | null
+  lastDeliveryError?: string | null
+  removeConfirming?: boolean
+  onRemoveRequest?: () => void
+  onConfirmRemove?: () => void
+  onCancelRemove?: () => void
+  onToggleActive?: () => void
+  toggleLoading?: boolean
 }
 
 function formatDate(iso: string): string {
@@ -26,143 +34,94 @@ export function AlertRow({
   isActive,
   lastTriggeredAt,
   createdAt,
-  onDelete,
+  lastDeliveryStatus,
+  lastDeliveryError,
+  removeConfirming = false,
+  onRemoveRequest,
+  onConfirmRemove,
+  onCancelRemove,
+  onToggleActive,
+  toggleLoading = false,
 }: AlertRowProps) {
-  const statusLabel = lastTriggeredAt ? 'Triggered' : isActive ? 'Active' : 'Inactive'
-  const statusVariant = lastTriggeredAt ? 'active' : isActive ? 'active' : 'default'
+  const statusLabel = lastTriggeredAt
+    ? 'Triggered'
+    : lastDeliveryStatus === 'failed'
+      ? 'Delivery failed'
+      : isActive
+        ? 'Active'
+        : 'Inactive'
+  const statusVariant = lastTriggeredAt || isActive ? 'active' : 'default'
   const statusColor = lastTriggeredAt
     ? 'var(--save)'
-    : isActive
-      ? 'var(--accent)'
-      : 'var(--text-faint)'
+    : lastDeliveryStatus === 'failed'
+      ? 'var(--danger)'
+      : isActive
+        ? 'var(--accent)'
+        : 'var(--text-faint)'
 
   return (
     <div
+      className="alert-row"
       style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr auto auto auto auto',
-        alignItems: 'center',
-        gap: '16px',
-        padding: '14px 20px',
         borderLeft: isActive && !lastTriggeredAt ? '2px solid var(--accent)' : lastTriggeredAt ? '2px solid var(--save)' : '2px solid transparent',
       }}
     >
-      {/* Product identity */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 'var(--r-sm)',
-            background: 'var(--bg3)',
-            border: '1px solid var(--glass-plate-border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'var(--font-mono)',
-            fontSize: '0.75rem',
-            color: 'var(--text-dim)',
-            fontWeight: 600,
-            flexShrink: 0,
-          }}
-        >
-          {initials}
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: '0.9375rem',
-              fontWeight: 500,
-              color: 'var(--text)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {name}
-          </div>
-          {subtitle && (
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-dim)' }}>{subtitle}</div>
+      <div className="alert-row-product">
+        <div className="alert-row-avatar">{initials}</div>
+        <div className="alert-row-copy">
+          <div className="alert-row-name">{name}</div>
+          {subtitle && <div className="alert-row-subtitle">{subtitle}</div>}
+          {lastDeliveryStatus === 'failed' && lastDeliveryError && (
+            <div className="alert-row-delivery-error" role="status">
+              {lastDeliveryError}
+            </div>
           )}
         </div>
       </div>
 
-      {/* Target price */}
-      <div style={{ textAlign: 'right' }}>
-        <div
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '0.6875rem',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'var(--text-faint)',
-            marginBottom: 3,
-          }}
-        >
-          Target
-        </div>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '0.9375rem',
-            fontWeight: 600,
-            color: 'var(--text)',
-          }}
-        >
-          {formatINR(targetPrice)}
-        </span>
+      <div className="alert-row-target">
+        <div className="alert-row-target-label">Target</div>
+        <span className="mono">{formatINR(targetPrice)}</span>
       </div>
 
-      {/* Status */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span
-          style={{
-            display: 'inline-block',
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: statusColor,
-            flexShrink: 0,
-          }}
-        />
+      <div className="alert-row-status">
+        <span className="alert-row-status-dot" style={{ background: statusColor }} />
         <Chip variant={statusVariant} size="sm">
           {statusLabel}
         </Chip>
       </div>
 
-      {/* Date */}
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.75rem',
-          color: 'var(--text-faint)',
-          whiteSpace: 'nowrap',
-        }}
-      >
+      <span className="alert-row-date mono">
         {lastTriggeredAt ? `Hit ${formatDate(lastTriggeredAt)}` : `Set ${formatDate(createdAt)}`}
       </span>
 
-      {/* Delete */}
-      <button
-        onClick={onDelete}
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          color: 'var(--text-faint)',
-          fontSize: '1rem',
-          width: 44,
-          height: 44,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: 'var(--r-pill)',
-          lineHeight: 1,
-        }}
-        aria-label="Remove alert"
-      >
-        ···
-      </button>
+      <div className="alert-row-actions">
+        {!lastTriggeredAt && onToggleActive && (
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            disabled={toggleLoading}
+            onClick={onToggleActive}
+          >
+            {toggleLoading ? 'Saving…' : isActive ? 'Pause' : 'Reactivate'}
+          </Button>
+        )}
+        {removeConfirming ? (
+          <div className="row-confirm-actions">
+            <Button variant="ghost" size="sm" type="button" onClick={onCancelRemove}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="sm" type="button" onClick={onConfirmRemove}>
+              Remove
+            </Button>
+          </div>
+        ) : (
+          <Button variant="ghost" size="sm" type="button" onClick={onRemoveRequest}>
+            Remove
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

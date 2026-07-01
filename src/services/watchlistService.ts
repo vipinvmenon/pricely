@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { logWarn } from '@/lib/observability/logger'
 import { shouldUseMockData } from '@/lib/runtime/mockMode'
 import { deriveWatchlistPricing } from '@/lib/watchlist/pricing'
 import type { CompareResponse, WatchlistPageItem } from '@/types'
@@ -55,17 +56,21 @@ async function fetchCompareData(productId: string, city: string): Promise<Compar
     try {
       const { compareService } = await import('@/services/compareService')
       return await compareService.compareByProductId(productId, city)
-    } catch {
-      // Fall back to stored history when the scraper is unavailable.
+    } catch (err) {
+      logWarn('watchlist_live_compare_failed', {
+        productId,
+        city,
+        errorMessage: err instanceof Error ? err.message : String(err),
+      })
     }
   }
 
   try {
     const { priceHistoryService } = await import('@/services/priceHistoryService')
-    const history = await priceHistoryService.getPriceHistory(productId, city, 90)
-    if (history.length === 0) return null
+    const historyBundle = await priceHistoryService.getPriceHistory(productId, city, 90)
+    if (historyBundle.dailyLowest.length === 0) return null
 
-    const now = history[history.length - 1].price
+    const now = historyBundle.dailyLowest[historyBundle.dailyLowest.length - 1].price
     return {
       product: {
         id:       productId,
@@ -86,9 +91,15 @@ async function fetchCompareData(productId: string, city: string): Promise<Compar
           buyUrl:    '',
         },
       ],
-      history,
+      history: historyBundle.dailyLowest,
+      historyByPlatform: historyBundle.byPlatform,
     }
-  } catch {
+  } catch (err) {
+    logWarn('watchlist_history_fallback_failed', {
+      productId,
+      city,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
     return null
   }
 }

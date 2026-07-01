@@ -13,9 +13,9 @@ const TRENDING_CHIPS = [
 ];
 
 const STATS = [
-	{ value: "7", label: "Retailers compared in one view" },
-	{ value: "90-day", label: "Price history behind every verdict" },
-	{ value: "Buy / Wait", label: "A clear call, always with the reason" },
+	{ value: "Up to 7", label: "Supported retailers when coverage is available" },
+	{ value: "Up to 90 days", label: "Price history when we have enough daily data" },
+	{ value: "Buy / Wait", label: "A clear call with stated confidence" },
 ];
 
 const HOW_STEPS = [
@@ -41,11 +41,13 @@ export function HomeFirstVisit({
 	setQuery,
 	onSearch,
 	onChip,
+	suggestions = [],
 }: {
 	query: string;
 	setQuery: (q: string) => void;
 	onSearch: (e: FormEvent) => void;
 	onChip: (q: string) => void;
+	suggestions?: string[];
 }) {
 	return (
 		<div
@@ -110,8 +112,9 @@ export function HomeFirstVisit({
 					letterSpacing: "-0.005em",
 				}}
 			>
-				Pricely watches the price of anything you want to buy — across Amazon, Flipkart,
-				Myntra, Croma and more — and tells you the one thing that matters:{" "}
+				Pricely watches electronics and fashion prices across supported Indian
+				retailers — Amazon, Flipkart, Croma, and more — and tells you the one thing
+				that matters:{" "}
 				<strong style={{ color: "var(--text)", fontWeight: 600 }}>
 					buy now, or wait.
 				</strong>
@@ -123,8 +126,10 @@ export function HomeFirstVisit({
 					value={query}
 					onChange={setQuery}
 					onSubmit={onSearch}
-					placeholder="Search any product…"
+					placeholder="Search electronics or fashion…"
 					big
+					suggestions={suggestions}
+					onSelectSuggestion={onChip}
 				/>
 				<div
 					style={{
@@ -203,6 +208,19 @@ export function HomeFirstVisit({
 					</div>
 				))}
 			</div>
+			<p
+				style={{
+					marginTop: 16,
+					fontSize: 12,
+					color: "var(--text-faint)",
+					maxWidth: 640,
+					lineHeight: 1.5,
+				}}
+			>
+				Coverage, freshness, and history depth vary by product, city, and retailer
+				availability. Pricely shows what we could verify — not a guarantee of the
+				lowest payable price.
+			</p>
 
 			{/* How it works */}
 			<div style={{ marginTop: 56 }}>

@@ -50,7 +50,7 @@ Pricely watches the price of anything you want to buy — logs it daily, learns 
 | **Verdict** | Rule-based buy/wait signal with GPT-4o-mini fallback for edge cases. No black box. |
 | **Price history** | Interactive chart showing how a product's price has moved over time. |
 | **Watchlist** | Save products you're considering. Sign in to sync across devices. |
-| **Alerts** | Set a target price. Get an email the moment it drops. Checked every 5 minutes. |
+| **Alerts** | Set a target price. Get an email when it drops below your target. Checked every 15 minutes. |
 | **Trending** | See what other shoppers are tracking right now. |
 
 ---
@@ -127,8 +127,9 @@ watchlist or alert when signed in.
 | 7 retailer scrapers | Implemented (live coverage varies by site and credentials) |
 | Local dev on mock data, no credentials | Supported |
 
-Deferred to v1.1: city-selector UI, light-theme parity, and additional categories
-(groceries, cabs). See [`PROGRESS.md`](PROGRESS.md).
+Deferred to v1.1: light-theme parity and additional categories (groceries, cabs). City
+selector and electronics/fashion positioning are in the current build. See
+[`PROGRESS.md`](PROGRESS.md).
 
 ---
 
@@ -212,10 +213,14 @@ FLIPKART_AFFILIATE_TOKEN=<token>
 
 # Resend email
 RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=Pricely <alerts@yourdomain.com>  # verified domain — required for production deliverability
 
 # Vercel cron verification
 CRON_SECRET=<random_32_char_secret>
 ```
+
+`RESEND_FROM_EMAIL` must use a domain verified in Resend (SPF/DKIM/DMARC). Without it,
+production falls back to `onboarding@resend.dev` and logs a warning.
 
 </details>
 
@@ -238,8 +243,15 @@ Health check: `GET /health` → `{ "ok": true }`
 
 ### Deployment
 
-- **Vercel** — push to `main`, auto-deploys
+- **Vercel** — push to `main`, auto-deploys. Alert cron runs every 15 minutes (`vercel.json`).
 - **Railway** — push to `main`, builds via `railway.toml`
+- **Package manager** — use `pnpm` locally (`pnpm install`, `pnpm dev`). Commit lockfile when the team standardizes on pnpm.
+- **Middleware** — Next.js 16 deprecates the `middleware.ts` convention in favor of `proxy`; migration is tracked for a follow-up release.
+
+Before go-live, run the slice gate manually:
+1. Search → compare → confirm variant (if prompted) → track → set alert (signed out → sign in → alert flushes).
+2. Confirm cron processes a test alert and Resend returns a message id.
+3. Run `bash scripts/run-unit-tests.sh` and `npm run build`.
 
 ---
 

@@ -30,115 +30,73 @@ export function RetailerRow({
 }: RetailerRowProps) {
   const isLowStock = stock.toLowerCase().includes('low')
   const stockLabel = stock === 'not_listed' ? 'Not listed' : stock
+  const buyLabel = `Buy ${name}`
 
   return (
     <div
+      role="row"
+      className="retailer-row"
       style={{
-        display: 'grid',
-        gridTemplateColumns: '32px 1fr auto auto auto auto auto',
-        alignItems: 'center',
-        gap: '16px',
-        padding: '14px 20px',
-        borderRadius: 'var(--r-md)',
         background: isLowest ? 'var(--accent-dim)' : 'transparent',
         borderLeft: isLowest ? '2px solid var(--accent)' : '2px solid transparent',
         opacity: available ? 1 : 0.55,
-        transition: 'background 0.15s',
       }}
     >
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.75rem',
-          color: 'var(--text-faint)',
-          textAlign: 'center',
-        }}
-      >
-        {rank}
-      </span>
+      <div className="retailer-row-main">
+        <span className="retailer-row-rank mono">{rank}</span>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+        <div className="retailer-row-identity">
+          <span className="retailer-row-name">{name}</span>
+          {isLowest && <span className="retailer-row-badge">LOWEST</span>}
+        </div>
+
+        <div className="retailer-row-price">
+          {available ? (
+            <>
+              <PriceBadge value={price} size="md" />
+              {mrp && mrp > price && <PriceBadge value={mrp} size="sm" strike />}
+            </>
+          ) : (
+            <span className="retailer-row-unavailable">—</span>
+          )}
+        </div>
+
+        <span className="retailer-row-delivery">{delivery}</span>
+        <span className="retailer-row-returns">{returns}</span>
         <span
-          style={{
-            fontSize: '0.9375rem',
-            fontWeight: 500,
-            color: 'var(--text)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
+          className="retailer-row-stock"
+          style={{ color: isLowStock ? 'var(--warn)' : 'var(--text-dim)' }}
         >
-          {name}
+          {stockLabel}
         </span>
-        {isLowest && (
-          <span
-            style={{
-              fontSize: '0.6875rem',
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              padding: '2px 8px',
-              borderRadius: 'var(--r-pill)',
-              background: 'var(--accent)',
-              color: 'var(--bg0)',
-              flexShrink: 0,
-            }}
-          >
-            LOWEST
-          </span>
-        )}
+
+        <div className="retailer-row-action">
+          {available ? (
+            <Button variant={isLowest ? 'primary' : 'ghost'} size="sm" onClick={onBuy}>
+              Buy
+            </Button>
+          ) : (
+            <span className="retailer-row-unavailable">—</span>
+          )}
+        </div>
       </div>
 
-      <div style={{ textAlign: 'right' }}>
-        {available ? (
-          <>
+      <div className="retailer-row-mobile-meta">
+        <span>{delivery}</span>
+        <span>{returns}</span>
+        <span style={{ color: isLowStock ? 'var(--warn)' : 'var(--text-dim)' }}>{stockLabel}</span>
+      </div>
+
+      {available && (
+        <div className="retailer-row-mobile-footer">
+          <div>
             <PriceBadge value={price} size="md" />
-            {mrp && mrp > price && (
-              <div>
-                <PriceBadge value={mrp} size="sm" strike />
-              </div>
-            )}
-          </>
-        ) : (
-          <span style={{ fontSize: '0.9375rem', color: 'var(--text-faint)' }}>—</span>
-        )}
-      </div>
-
-      <span
-        style={{
-          fontSize: '0.8125rem',
-          color: 'var(--text-dim)',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {delivery}
-      </span>
-
-      <span
-        style={{
-          fontSize: '0.8125rem',
-          color: 'var(--text-dim)',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {returns}
-      </span>
-
-      <span
-        style={{
-          fontSize: '0.8125rem',
-          color: isLowStock ? 'var(--warn)' : 'var(--text-dim)',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {stockLabel}
-      </span>
-
-      {available ? (
-        <Button variant={isLowest ? 'primary' : 'ghost'} size="sm" onClick={onBuy}>
-          Buy
-        </Button>
-      ) : (
-        <span style={{ fontSize: '0.8125rem', color: 'var(--text-faint)', padding: '0 12px' }}>—</span>
+            {mrp && mrp > price && <PriceBadge value={mrp} size="sm" strike />}
+          </div>
+          <Button variant={isLowest ? 'primary' : 'ghost'} size="sm" onClick={onBuy}>
+            {buyLabel}
+          </Button>
+        </div>
       )}
     </div>
   )

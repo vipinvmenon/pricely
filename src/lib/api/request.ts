@@ -52,3 +52,13 @@ export function serviceRoleMissing(): NextResponse {
     { status: 503 },
   )
 }
+
+export function scraperUnavailable(): NextResponse {
+  return NextResponse.json(
+    {
+      error: 'scraper_unavailable',
+      message: 'Live price comparison is temporarily unavailable.',
+    },
+    { status: 503 },
+  )
+}

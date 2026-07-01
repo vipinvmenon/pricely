@@ -21,6 +21,7 @@ export function Button({
   loading = false,
   style,
   disabled,
+  className,
   ...rest
 }: ButtonProps) {
   const isDisabled = Boolean(disabled) || loading
@@ -60,8 +61,10 @@ export function Button({
   return (
     <button
       {...rest}
+      type={rest.type ?? 'button'}
       disabled={isDisabled}
       aria-busy={loading || undefined}
+      className={[size === 'sm' ? 'touch-target-sm' : '', className].filter(Boolean).join(' ') || undefined}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

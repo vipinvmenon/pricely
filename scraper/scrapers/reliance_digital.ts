@@ -1,20 +1,10 @@
-import { chromium } from 'playwright'
 import type { Scraper, ScraperResult } from '../types'
+import { withBrowserPage } from '../lib/browserContext'
 import { withRetry } from '../lib/retry'
 
 export const reliance_digital: Scraper = async ({ query, maxResults }) =>
-  withRetry(async () => {
-    const browser = await chromium.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    })
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      viewport:  { width: 1280, height: 800 },
-      locale:    'en-IN',
-    })
-    const page = await context.newPage()
-    try {
+  withRetry(async () =>
+    withBrowserPage(async (page) => {
       await page.goto(
         `https://www.reliancedigital.in/products?q=${encodeURIComponent(query)}`,
         { waitUntil: 'domcontentloaded', timeout: 30_000 },
@@ -27,7 +17,6 @@ export const reliance_digital: Scraper = async ({ query, maxResults }) =>
 
         for (const a of Array.from(document.querySelectorAll('a[href*="/product/"]'))) {
           const rawHref = (a as HTMLAnchorElement).getAttribute('href') || ''
-          // Reliance Digital product URLs are /product/<slug>-<numeric-id>[?query]
           const idMatch = rawHref.match(/\/product\/.+-(\d+)(?:[/?]|$)/)
           if (!idMatch) continue
           const id = idMatch[1]
@@ -41,7 +30,6 @@ export const reliance_digital: Scraper = async ({ query, maxResults }) =>
           }
           if (!card) continue
 
-          // Title is the card text up to the first price; strip promo prefixes.
           const cardText = (card.textContent || '').replace(/\s+/g, ' ').trim()
           const title = cardText
             .split('₹')[0]
@@ -84,8 +72,5 @@ export const reliance_digital: Scraper = async ({ query, maxResults }) =>
           returns:    '10 days',
           scrapedAt:  new Date().toISOString(),
         } satisfies ScraperResult))
-    } finally {
-      await context.close()
-      await browser.close()
-    }
-  })
+    }),
+  )

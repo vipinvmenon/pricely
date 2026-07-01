@@ -4,9 +4,13 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { Nav } from "@/components/layout/Nav";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { HomeFirstVisit } from "@/components/features/home/HomeFirstVisit";
 import { HomeReturning } from "@/components/features/home/HomeReturning";
 import { useSupabaseUser } from "@/lib/hooks/useSupabaseUser";
+import { useRecentSearches } from "@/lib/hooks/useRecentSearches";
+import { useSearchSuggestions } from "@/lib/hooks/useSearchSuggestions";
+import { trackEvent } from "@/lib/analytics/track";
 import { fetchJson } from "@/lib/utils/fetchJson";
 import { normalizeQuery } from "@/lib/utils/format";
 import type { WatchlistPageItem } from "@/types";
@@ -15,6 +19,8 @@ export default function HomePage() {
 	const router = useRouter();
 	const { user, ready } = useSupabaseUser();
 	const [query, setQuery] = useState("");
+	const { addRecent } = useRecentSearches();
+	const suggestions = useSearchSuggestions(query);
 
 	const { data: watchlistData } = useSWR<WatchlistPageItem[]>(
 		ready && user ? "/api/watchlist" : null,
@@ -28,12 +34,18 @@ export default function HomePage() {
 	function handleSearch(e: FormEvent) {
 		e.preventDefault();
 		const q = normalizeQuery(query);
-		if (q) router.push(`/compare?q=${encodeURIComponent(q)}`);
+		if (!q) return;
+		addRecent(q);
+		trackEvent("search_submitted", { query: q, source: "home" });
+		router.push(`/compare?q=${encodeURIComponent(q)}`);
 	}
 
 	function navigateTo(q: string) {
 		const normalized = normalizeQuery(q);
-		if (normalized) router.push(`/compare?q=${encodeURIComponent(normalized)}`);
+		if (!normalized) return;
+		addRecent(normalized);
+		trackEvent("search_submitted", { query: normalized, source: "home_chip" });
+		router.push(`/compare?q=${encodeURIComponent(normalized)}`);
 	}
 
 	const watchlistItems = watchlistData ?? [];
@@ -57,8 +69,10 @@ export default function HomePage() {
 					setQuery={setQuery}
 					onSearch={handleSearch}
 					onChip={navigateTo}
+					suggestions={suggestions}
 				/>
 			)}
+			<SiteFooter />
 			<style>{`
         .pulse-dot-ring {
           position: absolute;

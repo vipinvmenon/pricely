@@ -45,8 +45,9 @@ export function Chip({
 
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={className}
+      className={size === 'sm' ? `chip-touch ${className ?? ''}`.trim() : className}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

@@ -33,16 +33,24 @@ function ChangeRow({
 	const isGood = item.tone === "good" || item.tone === "hit";
 
 	return (
-		<div
+		<button
+			type="button"
 			onClick={() => onNavigate(item.name)}
+			aria-label={`Compare prices for ${item.name}`}
 			style={{
 				display: "grid",
 				gridTemplateColumns: "12px 1fr auto",
 				gap: 18,
 				alignItems: "center",
 				padding: "20px 4px",
-				borderBottom: "1px solid var(--glass-plate-border)",
 				cursor: "pointer",
+				width: "100%",
+				background: "transparent",
+				border: "none",
+				borderBottom: "1px solid var(--glass-plate-border)",
+				textAlign: "left",
+				font: "inherit",
+				color: "inherit",
 			}}
 		>
 			<span
@@ -140,7 +148,7 @@ function ChangeRow({
 					/>
 				</svg>
 			</div>
-		</div>
+		</button>
 	);
 }
 

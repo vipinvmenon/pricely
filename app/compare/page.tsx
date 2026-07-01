@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR, { useSWRConfig } from "swr";
@@ -10,19 +10,33 @@ import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { PriceBadge } from "@/components/ui/PriceBadge";
 import { RetailerRow } from "@/components/ui/RetailerRow";
+import { ProductImage } from "@/components/ui/ProductImage";
 import { PriceChart } from "@/components/ui/PriceChart";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { LoadingState, ErrorState } from "@/components/ui/LoadingState";
+import { SiteFooter } from "@/components/layout/SiteFooter";
+import { useToast } from "@/components/providers/ToastProvider";
+import { trackEvent } from "@/lib/analytics/track";
+import { useRecentSearches } from "@/lib/hooks/useRecentSearches";
+import { useSearchSuggestions } from "@/lib/hooks/useSearchSuggestions";
 import { VerdictHero } from "@/components/features/VerdictHero";
-import { DEFAULT_CITY, DEFAULT_COMPARE_QUERY } from "@/lib/constants";
+import { useCity } from "@/lib/hooks/useCity";
+import { addPendingAlert, usePendingAlert } from "@/lib/hooks/usePendingAlert";
 import { useSupabaseUser } from "@/lib/hooks/useSupabaseUser";
 import { trackProduct } from "@/lib/watchlist/trackProduct";
 import { normalizeProductCategory } from "@/lib/utils/productCategory";
-import { fetchJson } from "@/lib/utils/fetchJson";
+import { FetchJsonError, fetchJson } from "@/lib/utils/fetchJson";
 import { formatINR, normalizeQuery } from "@/lib/utils/format";
+import { platformName } from "@/lib/utils/platforms";
 import type { CompareResponse, TrendingItem } from "@/types";
 
-function compareUrl(query: string): string {
-	return `/api/compare?q=${encodeURIComponent(query)}&city=${encodeURIComponent(DEFAULT_CITY)}`;
+function compareUrl(query: string, city: string, confirm?: string): string {
+	const params = new URLSearchParams({
+		q: query,
+		city,
+	});
+	if (confirm) params.set("confirm", confirm);
+	return `/api/compare?${params.toString()}`;
 }
 
 function ComparePageContent() {
@@ -30,13 +44,19 @@ function ComparePageContent() {
 	const searchParams = useSearchParams();
 	const { mutate } = useSWRConfig();
 	const { user, ready: authReady, configured } = useSupabaseUser();
+	const { city, ready: cityReady } = useCity();
+	usePendingAlert(Boolean(user && authReady));
 
 	const paramQuery = searchParams.get("q")?.trim() ?? "";
-	const activeQuery = paramQuery || DEFAULT_COMPARE_QUERY;
+	const confirmTitle = searchParams.get("confirm")?.trim() ?? "";
+	const hasQuery = Boolean(paramQuery);
 
-	const [inputQuery, setInputQuery] = useState(activeQuery);
+	const [inputQuery, setInputQuery] = useState(paramQuery);
 	const [prevParamQuery, setPrevParamQuery] = useState(paramQuery);
 	const [showAll, setShowAll] = useState(false);
+	const [inStockOnly, setInStockOnly] = useState(false);
+	const [refreshing, setRefreshing] = useState(false);
+	const [refreshAvailableAt, setRefreshAvailableAt] = useState(0);
 	const [trackState, setTrackState] = useState<"idle" | "loading" | "done">(
 		"idle",
 	);
@@ -50,16 +70,26 @@ function ComparePageContent() {
 	// Sync input when URL param changes (React's "adjust state on render" pattern)
 	if (paramQuery !== prevParamQuery) {
 		setPrevParamQuery(paramQuery);
-		setInputQuery(paramQuery || DEFAULT_COMPARE_QUERY);
+		setInputQuery(paramQuery);
 		setShowAll(false);
 	}
+
+	const { pushToast } = useToast();
+	const { addRecent } = useRecentSearches();
+	const suggestions = useSearchSuggestions(inputQuery);
+
+	const compareKey =
+		hasQuery && cityReady
+			? compareUrl(paramQuery, city, confirmTitle || undefined)
+			: null;
 
 	const {
 		data,
 		error,
 		isLoading,
+		mutate: mutateCompare,
 	} = useSWR<CompareResponse>(
-		compareUrl(activeQuery),
+		compareKey,
 		(url: string) => fetchJson<CompareResponse>(url),
 		{
 			// Compare can fan out to multiple scrapers, so avoid automatic refetch storms.
@@ -71,7 +101,7 @@ function ComparePageContent() {
 	);
 
 	const { data: trending } = useSWR<TrendingItem[]>(
-		`/api/trending?city=${encodeURIComponent(DEFAULT_CITY)}`,
+		cityReady ? `/api/trending?city=${encodeURIComponent(city)}` : null,
 		(url: string) => fetchJson<TrendingItem[]>(url),
 	);
 
@@ -86,13 +116,58 @@ function ComparePageContent() {
 		];
 
 	const retailers = data?.retailers ?? [];
-	const visibleRetailers = showAll ? retailers : retailers.slice(0, 6);
+	const filteredRetailers = inStockOnly
+		? retailers.filter(
+				(r) =>
+					r.available !== false &&
+					r.stock !== "out_of_stock" &&
+					r.stock !== "not_listed",
+			)
+		: retailers;
+	const visibleRetailers = showAll ? filteredRetailers : filteredRetailers.slice(0, 6);
 	const lowest =
 		retailers.find((r) => r.isLowest && r.available !== false) ??
 		retailers.find((r) => r.available !== false);
-	const pricedCount = retailers.filter((r) => r.available !== false).length;
+	const pricedCount = retailers.filter((r) => r.available !== false && r.price > 0).length;
+	const scrapeErrors = data?.errors ?? [];
+	const failedRetailerCount = scrapeErrors.length;
+	const notListedCount = retailers.filter((r) => r.stock === "not_listed").length;
+	const freshnessLabel = data?.fetchedAt
+		? `Updated ${new Date(data.fetchedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}`
+		: null;
+	const refreshCooldownSec = Math.max(
+		0,
+		Math.ceil((refreshAvailableAt - Date.now()) / 1000),
+	);
+	const canRefresh =
+		hasQuery &&
+		!data?.isDemoData &&
+		!refreshing &&
+		Date.now() >= refreshAvailableAt;
+	const hasLivePrices = pricedCount > 0;
+	const showWeakMatch = hasQuery && data && !data.isDemoData && !hasLivePrices && retailers.length > 0;
+	const showDisambiguation =
+		hasQuery &&
+		data &&
+		!data.isDemoData &&
+		data.matchConfidence !== "high" &&
+		(data.alternateMatches?.length ?? 0) > 1;
+
+	function confirmVariant(title: string) {
+		const params = new URLSearchParams({ q: paramQuery, confirm: title });
+		trackEvent("variant_confirmed", { query: paramQuery });
+		router.replace(`/compare?${params.toString()}`);
+	}
 	const verdict = data?.verdict;
 	const productId = data?.product.id;
+
+	useEffect(() => {
+		if (!data || !hasQuery) return;
+		trackEvent("compare_viewed", {
+			query: paramQuery,
+			demo: Boolean(data.isDemoData),
+		});
+	}, [data, hasQuery, paramQuery]);
 
 	// Reset transient action state when the product changes (adjust-state-during-render).
 	const [trackedProductId, setTrackedProductId] = useState(productId);
@@ -116,6 +191,8 @@ function ComparePageContent() {
 	function navigateToQuery(raw: string) {
 		const q = normalizeQuery(raw);
 		if (!q) return;
+		addRecent(q);
+		trackEvent("search_submitted", { query: q, source: "compare" });
 		router.replace(`/compare?q=${encodeURIComponent(q)}`);
 	}
 
@@ -132,7 +209,7 @@ function ComparePageContent() {
 			const result = await trackProduct(
 				{
 					productId: data.product.id,
-					city: DEFAULT_CITY,
+					city,
 					title: data.product.name,
 					category: normalizeProductCategory(data.product.category),
 					subtitle:
@@ -140,12 +217,14 @@ function ComparePageContent() {
 							.filter(Boolean)
 							.join(" · ") || undefined,
 					imageUrl: data.product.image,
-					searchQuery: activeQuery,
+					searchQuery: paramQuery,
 				},
 				Boolean(user),
 			);
 			if (result === "synced") {
 				await mutate("/api/watchlist");
+				pushToast("Added to watchlist", "success");
+				trackEvent("product_tracked", { productId: data.product.id });
 			}
 			if (result === "pending") {
 				router.push(
@@ -178,7 +257,20 @@ function ComparePageContent() {
 		}
 
 		if (!user) {
-			const next = `/compare?q=${encodeURIComponent(activeQuery)}`;
+			addPendingAlert({
+				productId: data.product.id,
+				city,
+				targetPrice: parsed,
+				title: data.product.name,
+				category: normalizeProductCategory(data.product.category),
+				subtitle:
+					[data.product.brand, data.product.category]
+						.filter(Boolean)
+						.join(" · ") || undefined,
+				imageUrl: data.product.image,
+				searchQuery: paramQuery,
+			});
+			const next = `/compare?q=${encodeURIComponent(paramQuery)}`;
 			router.push(
 				configured
 					? `/signin?next=${encodeURIComponent(next)}`
@@ -195,7 +287,7 @@ function ComparePageContent() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					productId: data.product.id,
-					city: DEFAULT_CITY,
+					city,
 					targetPrice: parsed,
 					title: data.product.name,
 					category: normalizeProductCategory(data.product.category),
@@ -204,11 +296,13 @@ function ComparePageContent() {
 							.filter(Boolean)
 							.join(" · ") || undefined,
 					imageUrl: data.product.image,
-					searchQuery: activeQuery,
+					searchQuery: paramQuery,
 				}),
 			});
 			await mutate("/api/alerts");
 			setAlertState("done");
+			pushToast("Price alert saved", "success");
+			trackEvent("alert_created", { productId: data.product.id });
 		} catch (err) {
 			setAlertState("idle");
 			const message =
@@ -218,6 +312,24 @@ function ComparePageContent() {
 					? "Add SUPABASE_SERVICE_ROLE_KEY to .env.local and restart the server."
 					: message || "Could not create alert. Did you run supabase/schema.sql?",
 			);
+		}
+	}
+
+	async function handleRefreshPrices() {
+		if (!hasQuery || !cityReady || refreshing || Date.now() < refreshAvailableAt) return;
+
+		setRefreshing(true);
+		try {
+			const url = `${compareUrl(paramQuery, city, confirmTitle || undefined)}&refresh=1`;
+			const fresh = await fetchJson<CompareResponse>(url);
+			await mutateCompare(fresh, { revalidate: false });
+			setRefreshAvailableAt(Date.now() + 60_000);
+			trackEvent("compare_refreshed", { query: paramQuery });
+			pushToast("Prices refreshed", "success");
+		} catch {
+			pushToast("Could not refresh prices. Try again shortly.", "error");
+		} finally {
+			setRefreshing(false);
 		}
 	}
 
@@ -265,9 +377,11 @@ function ComparePageContent() {
 						value={inputQuery}
 						onChange={setInputQuery}
 						onSubmit={handleSubmit}
-						placeholder="Search for any product…"
+						placeholder="Search electronics or fashion…"
 						submitLabel="Compare"
 						ariaLabel="Search products to compare"
+						suggestions={suggestions}
+						onSelectSuggestion={navigateToQuery}
 					/>
 				</div>
 
@@ -275,7 +389,7 @@ function ComparePageContent() {
 					{trendingQueries.map((q) => (
 						<Chip
 							key={q}
-							variant={normalizeQuery(q) === normalizeQuery(activeQuery) ? "active" : "default"}
+							variant={normalizeQuery(q) === normalizeQuery(paramQuery) ? "active" : "default"}
 							size="sm"
 							onClick={() => navigateToQuery(q)}
 						>
@@ -285,33 +399,124 @@ function ComparePageContent() {
 				</div>
 			</section>
 
-			{isLoading ? (
-				<div
-					style={{
-						textAlign: "center",
-						padding: "60px 24px",
-						color: "var(--text-faint)",
-						fontFamily: "var(--font-mono)",
-					}}
-				>
-					Loading…
-				</div>
+			{!hasQuery ? (
+				<section style={{ padding: "0 24px 60px", maxWidth: 1100, margin: "0 auto" }}>
+					<Glass
+						variant="plate"
+						style={{
+							padding: "48px 32px",
+							borderRadius: "var(--r-lg)",
+							textAlign: "center",
+						}}
+					>
+						<h2 style={{ fontSize: "1.375rem", margin: "0 0 12px", color: "var(--text)" }}>
+							Search to compare live prices
+						</h2>
+						<p style={{ color: "var(--text-dim)", margin: "0 0 24px", lineHeight: 1.6 }}>
+							Enter a product name above or pick a trending search to see retailer
+							prices, history, and a buy-or-wait verdict for {city}.
+						</p>
+					</Glass>
+				</section>
+			) : isLoading ? (
+				<LoadingState label="Fetching retailer prices…" />
 			) : error ? (
-				<div
-					style={{
-						textAlign: "center",
-						padding: "60px 24px",
-						color: "var(--danger)",
-						fontFamily: "var(--font-mono)",
-					}}
-				>
-					Could not load prices. Try again.
-				</div>
+				<ErrorState
+					message={
+						error instanceof FetchJsonError && error.status === 429
+							? "Too many comparison requests. Please wait and try again."
+							: "Could not load prices right now."
+					}
+					onRetry={() => void mutateCompare()}
+				/>
 			) : data ? (
 				<section
 					style={{ padding: "0 24px 60px", maxWidth: 1100, margin: "0 auto" }}
 				>
-					{verdict && (
+					{data.isDemoData && (
+						<div
+							role="status"
+							style={{
+								marginBottom: 16,
+								padding: "10px 14px",
+								borderRadius: "var(--r-md)",
+								border: "1px solid var(--warning-border, var(--glass-border))",
+								background: "var(--warning-soft, var(--glass))",
+								color: "var(--warning, var(--text-muted))",
+								fontFamily: "var(--font-mono)",
+								fontSize: "0.75rem",
+								letterSpacing: "0.04em",
+								textTransform: "uppercase",
+							}}
+						>
+							Demo data — prices are illustrative, not live retailer quotes.
+						</div>
+					)}
+
+					{showDisambiguation && (
+						<div
+							role="region"
+							aria-label="Confirm product variant"
+							style={{
+								marginBottom: 16,
+								padding: "14px 16px",
+								borderRadius: "var(--r-md)",
+								border: "1px solid var(--accent-border)",
+								background: "var(--accent-dim)",
+							}}
+						>
+							<p
+								style={{
+									color: "var(--text)",
+									fontSize: "0.875rem",
+									lineHeight: 1.5,
+									margin: "0 0 12px",
+								}}
+							>
+								We found multiple possible matches for &ldquo;{paramQuery}&rdquo;. Confirm
+								the exact product so prices compare the same variant.
+							</p>
+							<div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+								{(data?.alternateMatches ?? []).map((candidate) => (
+									<Button
+										key={candidate.title}
+										variant={
+											data?.confirmedTitle === candidate.title ||
+											data?.product.name === candidate.title
+												? "primary"
+												: "ghost"
+										}
+										size="sm"
+										type="button"
+										onClick={() => confirmVariant(candidate.title)}
+									>
+										{candidate.title}
+									</Button>
+								))}
+							</div>
+						</div>
+					)}
+
+					{showWeakMatch && (
+						<div
+							role="status"
+							style={{
+								marginBottom: 16,
+								padding: "10px 14px",
+								borderRadius: "var(--r-md)",
+								border: "1px solid var(--glass-plate-border)",
+								background: "var(--glass)",
+								color: "var(--text-dim)",
+								fontSize: "0.875rem",
+								lineHeight: 1.5,
+							}}
+						>
+							No in-stock prices found for &ldquo;{paramQuery}&rdquo;. Try a more specific
+							model name or check spelling.
+						</div>
+					)}
+
+					{verdict && hasLivePrices && (
 						<VerdictHero verdict={verdict} lowest={lowest} />
 					)}
 
@@ -329,22 +534,13 @@ function ComparePageContent() {
 								style={{
 									borderRadius: "var(--r-xl)",
 									aspectRatio: "4/3",
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
+									overflow: "hidden",
 								}}
 							>
-								<span
-									style={{
-										fontFamily: "var(--font-mono)",
-										fontSize: "0.6875rem",
-										letterSpacing: "0.1em",
-										textTransform: "uppercase",
-										color: "var(--text-faint)",
-									}}
-								>
-									Product image
-								</span>
+								<ProductImage
+									name={data.product.name}
+									imageUrl={data.product.image}
+								/>
 							</Glass>
 
 							<div>
@@ -365,12 +561,26 @@ function ComparePageContent() {
 										fontSize: "1.375rem",
 										fontWeight: 600,
 										color: "var(--text)",
-										margin: "0 0 16px",
+										margin: "0 0 8px",
 										lineHeight: 1.3,
 									}}
 								>
 									{data.product.name}
 								</h2>
+								{productId ? (
+									<Link
+										href={`/product/${productId}`}
+										style={{
+											fontSize: "0.8125rem",
+											color: "var(--accent)",
+											textDecoration: "none",
+											display: "inline-block",
+											marginBottom: 16,
+										}}
+									>
+										Shareable product link →
+									</Link>
+								) : null}
 
 								<div
 									style={{
@@ -602,29 +812,85 @@ function ComparePageContent() {
 										gap: 8,
 										fontSize: "0.875rem",
 										color: "var(--text-dim)",
+										flexWrap: "wrap",
 									}}
 								>
 									<span className="pulse-dot" />
-									{pricedCount} priced · {retailers.length} retailers tracked
+									{pricedCount} priced
+									{failedRetailerCount > 0 && ` · ${failedRetailerCount} failed`}
+									{notListedCount > 0 && ` · ${notListedCount} not listed`}
+									{freshnessLabel && ` · ${freshnessLabel}`}
 								</div>
-								<div style={{ display: "flex", gap: 8 }}>
-									{["Price", "Delivery", "Trust"].map((s, i) => (
-										<Chip
-											key={s}
+								<div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+									{!data.isDemoData && (
+										<Button
+											variant="ghost"
 											size="sm"
-											variant={i === 0 ? "active" : "default"}
+											type="button"
+											disabled={!canRefresh}
+											onClick={() => void handleRefreshPrices()}
 										>
-											{s}
-										</Chip>
-									))}
+											{refreshing
+												? "Refreshing…"
+												: refreshCooldownSec > 0
+													? `Refresh (${refreshCooldownSec}s)`
+													: "Refresh prices"}
+										</Button>
+									)}
+									<Chip size="sm" variant="active">
+										Price
+									</Chip>
+									<Chip
+										size="sm"
+										variant={inStockOnly ? "active" : "default"}
+										onClick={() => setInStockOnly((value) => !value)}
+									>
+										In stock only
+									</Chip>
 								</div>
 							</div>
+
+							<p
+								style={{
+									margin: "0 0 12px",
+									fontSize: "0.8125rem",
+									color: "var(--text-faint)",
+									lineHeight: 1.5,
+								}}
+							>
+								Prices shown are listed retailer quotes before shipping, coupons, bank
+								offers, and card cashback. Always verify the payable total at checkout.
+							</p>
+
+							{scrapeErrors.length > 0 && (
+								<div
+									role="status"
+									style={{
+										marginBottom: 12,
+										padding: "10px 14px",
+										borderRadius: "var(--r-md)",
+										border: "1px solid var(--glass-plate-border)",
+										background: "var(--glass)",
+										color: "var(--text-dim)",
+										fontSize: "0.8125rem",
+										lineHeight: 1.5,
+									}}
+								>
+									Some retailers could not be checked:{" "}
+									{scrapeErrors
+										.map((error) => platformName(error.platformId))
+										.join(", ")}
+								</div>
+							)}
 
 							<Glass
 								variant="plate"
 								style={{ padding: "8px 0", borderRadius: "var(--r-lg)" }}
 							>
+								<div role="table" aria-label="Retailer price comparison">
 								<div
+									role="row"
+									className="compare-table-header"
 									style={{
 										display: "grid",
 										gridTemplateColumns: "32px 1fr auto auto auto auto auto",
@@ -644,6 +910,7 @@ function ComparePageContent() {
 									].map((h) => (
 										<span
 											key={h}
+											role="columnheader"
 											style={{
 												fontFamily: "var(--font-mono)",
 												fontSize: "0.6875rem",
@@ -657,6 +924,7 @@ function ComparePageContent() {
 									))}
 								</div>
 
+								<div role="rowgroup">
 								{visibleRetailers.map((r) => (
 									<RetailerRow
 										key={`${r.rank}-${r.name}`}
@@ -670,12 +938,16 @@ function ComparePageContent() {
 										returns={r.returns}
 										stock={r.stock}
 										onBuy={() => {
-											if (r.buyUrl) window.open(r.buyUrl, "_blank");
+											if (!r.buyUrl) return;
+											trackEvent("retailer_clicked", { retailer: r.name });
+											window.open(r.buyUrl, "_blank");
 										}}
 									/>
 								))}
+								</div>
+								</div>
 
-								{retailers.length > 6 && (
+								{filteredRetailers.length > 6 && (
 									<div
 										style={{
 											padding: "12px 20px",
@@ -691,7 +963,7 @@ function ComparePageContent() {
 												color: "var(--text-faint)",
 											}}
 										>
-											+ {retailers.length - 6} more retailers
+											+ {filteredRetailers.length - 6} more retailers
 										</span>
 										<button
 											type="button"
@@ -727,7 +999,7 @@ function ComparePageContent() {
 								}}
 							>
 								<span className="pulse-dot" />
-								Price history · last 90 days
+								Price history · {data.history.length} days tracked
 							</div>
 
 							<h2
@@ -763,6 +1035,8 @@ function ComparePageContent() {
 					)}
 				</section>
 			) : null}
+
+			<SiteFooter />
 
 			<style>{`
         @media (max-width: 900px) {

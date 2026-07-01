@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { CitySelector } from "@/components/ui/CitySelector";
 import { useSupabaseUser } from "@/lib/hooks/useSupabaseUser";
 
 const NAV_LINKS = [
@@ -84,6 +85,24 @@ export function Nav() {
 		user?.user_metadata?.name ??
 		user?.email ??
 		"Account";
+	const mobileMenuId = useId();
+
+	useEffect(() => {
+		if (!mobileOpen) return;
+
+		const previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = "hidden";
+
+		function onKeyDown(event: KeyboardEvent) {
+			if (event.key === "Escape") setMobileOpen(false);
+		}
+
+		document.addEventListener("keydown", onKeyDown);
+		return () => {
+			document.body.style.overflow = previousOverflow;
+			document.removeEventListener("keydown", onKeyDown);
+		};
+	}, [mobileOpen]);
 
 	return (
 		<>
@@ -155,6 +174,7 @@ export function Nav() {
 									href={href}
 									prefetch={shouldPrefetch(href)}
 									aria-current={isActive ? "page" : undefined}
+									className="nav-link-touch"
 									style={{
 										display: "inline-flex",
 										alignItems: "center",
@@ -188,9 +208,11 @@ export function Nav() {
 					}}
 					className="nav-actions-desktop"
 				>
+					<CitySelector />
 					{showSignedIn ? (
 						<>
-							<span
+							<Link
+								href="/account"
 								style={{
 									fontSize: "0.8125rem",
 									color: "var(--text-dim)",
@@ -198,27 +220,34 @@ export function Nav() {
 									overflow: "hidden",
 									textOverflow: "ellipsis",
 									whiteSpace: "nowrap",
+									textDecoration: "none",
 								}}
 								title={userLabel}
 							>
 								{userLabel}
-							</span>
+							</Link>
 							<Button variant="ghost" size="sm" type="button" onClick={handleSignOut}>
 								Sign out
 							</Button>
 						</>
 					) : (
 						<>
-							<a href="/signin" style={{ textDecoration: "none" }}>
-								<Button variant="ghost" size="sm" type="button">
-									Sign in
-								</Button>
-							</a>
-							<a href="/signup" style={{ textDecoration: "none" }}>
-								<Button variant="primary" size="sm" type="button">
-									Create account
-								</Button>
-							</a>
+							<Button
+								variant="ghost"
+								size="sm"
+								type="button"
+								onClick={() => router.push("/signin")}
+							>
+								Sign in
+							</Button>
+							<Button
+								variant="primary"
+								size="sm"
+								type="button"
+								onClick={() => router.push("/signup")}
+							>
+								Create account
+							</Button>
 						</>
 					)}
 				</div>
@@ -227,6 +256,7 @@ export function Nav() {
 				<button
 					onClick={() => setMobileOpen(!mobileOpen)}
 					className="nav-hamburger"
+					type="button"
 					style={{
 						background: "none",
 						border: "none",
@@ -242,6 +272,7 @@ export function Nav() {
 					}}
 					aria-label="Toggle menu"
 					aria-expanded={mobileOpen}
+					aria-controls={mobileMenuId}
 				>
 					<MenuIcon />
 				</button>
@@ -249,7 +280,15 @@ export function Nav() {
 
 			{/* Mobile dropdown */}
 			{mobileOpen && (
+				<>
+					<button
+						type="button"
+						className="nav-mobile-backdrop"
+						aria-label="Close menu"
+						onClick={() => setMobileOpen(false)}
+					/>
 				<div
+					id={mobileMenuId}
 					className="nav-mobile-menu"
 					style={{
 						position: "fixed",
@@ -275,6 +314,7 @@ export function Nav() {
 								prefetch={shouldPrefetch(href)}
 								onClick={() => setMobileOpen(false)}
 								aria-current={isActive ? "page" : undefined}
+								className="nav-link-touch"
 								style={{
 									padding: "12px 16px",
 									borderRadius: "var(--r-md)",
@@ -290,6 +330,16 @@ export function Nav() {
 							</Link>
 						);
 					})}
+					<div
+						style={{
+							height: 1,
+							background: "var(--line)",
+							margin: "8px 0",
+						}}
+					/>
+					<div style={{ padding: "0 4px 8px" }}>
+						<CitySelector />
+					</div>
 					<div
 						style={{
 							height: 1,
@@ -321,27 +371,34 @@ export function Nav() {
 						</>
 					) : (
 						<>
-							<a
-								href="/signin"
-								onClick={() => setMobileOpen(false)}
-								style={{ textDecoration: "none" }}
+							<Button
+								variant="ghost"
+								size="md"
+								fullWidth
+								type="button"
+								onClick={() => {
+									setMobileOpen(false);
+									router.push("/signin");
+								}}
 							>
-								<Button variant="ghost" size="md" fullWidth type="button">
-									Sign in
-								</Button>
-							</a>
-							<a
-								href="/signup"
-								onClick={() => setMobileOpen(false)}
-								style={{ textDecoration: "none" }}
+								Sign in
+							</Button>
+							<Button
+								variant="primary"
+								size="md"
+								fullWidth
+								type="button"
+								onClick={() => {
+									setMobileOpen(false);
+									router.push("/signup");
+								}}
 							>
-								<Button variant="primary" size="md" fullWidth type="button">
-									Create account
-								</Button>
-							</a>
+								Create account
+							</Button>
 						</>
 					)}
 				</div>
+				</>
 			)}
 
 			<style>{`

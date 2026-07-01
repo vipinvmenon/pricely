@@ -1,25 +1,14 @@
-import { chromium } from 'playwright'
 import type { Scraper, ScraperResult } from '../types'
+import { withBrowserPage } from '../lib/browserContext'
 import { withRetry } from '../lib/retry'
 
 export const tata_cliq: Scraper = async ({ query, maxResults }) =>
-  withRetry(async () => {
-    const browser = await chromium.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    })
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      viewport:  { width: 1280, height: 800 },
-      locale:    'en-IN',
-    })
-    const page = await context.newPage()
-    try {
+  withRetry(async () =>
+    withBrowserPage(async (page) => {
       await page.goto(
         `https://www.tatacliq.com/search/?searchCategory=all&text=${encodeURIComponent(query)}`,
         { waitUntil: 'domcontentloaded', timeout: 30_000 },
       )
-      // Tata Cliq product URLs: /<slug>/p-<id>
       await page.waitForSelector('a[href*="/p-"]', { timeout: 20_000 })
 
       const items = await page.evaluate((max: number) => {
@@ -45,7 +34,6 @@ export const tata_cliq: Scraper = async ({ query, maxResults }) =>
           const title = cardText
             .split('₹')[0]
             .replace(/^quick view\s*/i, '')
-            // Card repeats the brand label glued to the title (e.g. "HammerHammer ...", "GRIPPGripp ...").
             .replace(/^([A-Za-z]+)\1(?=[A-Z\s])/, '$1')
             .trim()
           if (!title) continue
@@ -85,8 +73,5 @@ export const tata_cliq: Scraper = async ({ query, maxResults }) =>
           returns:    '10 days',
           scrapedAt:  new Date().toISOString(),
         } satisfies ScraperResult))
-    } finally {
-      await context.close()
-      await browser.close()
-    }
-  })
+    }),
+  )

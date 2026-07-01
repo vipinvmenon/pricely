@@ -1,17 +1,16 @@
 import { scraperClient } from '@/lib/scraper/client'
+import { buildSearchMockResults } from '@/lib/mock/buildSearchMock'
 import { cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
-import { shouldUseMockData } from '@/lib/runtime/mockMode'
+import {
+  canServeMockData,
+  isScraperConfigured,
+  ScraperNotConfiguredError,
+} from '@/lib/runtime/mockMode'
 import { platformName, SUPPORTED_PLATFORM_IDS } from '@/lib/utils/platforms'
 import type { PriceResult, ScrapeResult } from '@/types'
 
 const ALL_PLATFORMS = SUPPORTED_PLATFORM_IDS
-
-const MOCK_SEARCH_RESULTS: PriceResult[] = [
-  { platformId: 'amazon',   platformName: 'Amazon',   category: 'electronics', price: 23450, mrp: 29990, updatedAt: new Date().toISOString(), url: '#' },
-  { platformId: 'flipkart', platformName: 'Flipkart', category: 'electronics', price: 24499, mrp: 29990, updatedAt: new Date().toISOString(), url: '#' },
-  { platformId: 'croma',    platformName: 'Croma',    category: 'electronics', price: 25990, mrp: 29990, updatedAt: new Date().toISOString(), url: '#' },
-]
 
 function normaliseAndRank(raw: ScrapeResult[]): PriceResult[] {
   const seen = new Map<string, PriceResult>()
@@ -27,6 +26,7 @@ function normaliseAndRank(raw: ScrapeResult[]): PriceResult[] {
         mrp:          r.mrp,
         updatedAt:    r.scrapedAt,
         url:          r.url,
+        title:        r.title,
       })
     }
   }
@@ -37,7 +37,13 @@ export async function search(
   query: string,
   city: string,
 ): Promise<PriceResult[]> {
-  if (shouldUseMockData() || !process.env.SCRAPER_SERVICE_URL) return MOCK_SEARCH_RESULTS
+  if (!isScraperConfigured() && !canServeMockData()) {
+    throw new ScraperNotConfiguredError()
+  }
+
+  if (canServeMockData()) {
+    return buildSearchMockResults(query)
+  }
 
   const cacheKey = keys.search(query, city)
   const cached = await cacheGet<PriceResult[]>(cacheKey)

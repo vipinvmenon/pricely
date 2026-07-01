@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { invalidParams, resolveCity } from '@/lib/api/request'
 import { priceHistoryService } from '@/services/priceHistoryService'
 import { verdictService } from '@/services/verdictService'
-import type { HistoryPoint, VerdictResponse } from '@/types'
+import type { VerdictResponse } from '@/types'
 
 const QuerySchema = z.object({
   productId: z.string().min(1),
@@ -24,10 +24,10 @@ export async function GET(request: Request) {
 
   // History reads require Supabase; without it we still return an honest,
   // low-confidence verdict rather than throwing.
-  const history: HistoryPoint[] = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const historyBundle = process.env.NEXT_PUBLIC_SUPABASE_URL
     ? await priceHistoryService.getPriceHistory(parsed.data.productId, city, 90)
-    : []
-  const verdict = await verdictService.computeVerdict(history)
+    : { dailyLowest: [], byPlatform: {}, distinctDays: 0 }
+  const verdict = await verdictService.computeVerdict(historyBundle.dailyLowest)
 
   const body: VerdictResponse = { verdict }
   const response = NextResponse.json(body)

@@ -34,6 +34,8 @@ export type PriceResult = {
   offerText?: string
   updatedAt: string
   url?: string
+  /** Product listing title when returned from search scrape. */
+  title?: string
 }
 
 
@@ -60,17 +62,37 @@ export type CompareProduct = {
   image?: string
 }
 
+export type MatchConfidence = 'high' | 'medium' | 'low'
+
+export type ProductMatchCandidate = {
+  title: string
+  score: number
+  platformCount: number
+}
+
 export type CompareResponse = {
   product: CompareProduct
   retailers: RetailerRow[]
   history: HistoryPoint[]
+  historyByPlatform?: Partial<Record<PlatformId, HistoryPoint[]>>
   verdict?: Verdict
   errors?: ScrapeError[]
+  /** ISO timestamp for when live retailer prices were last fetched. */
+  fetchedAt?: string
+  /** True when the response is illustrative demo data, not live retailer prices. */
+  isDemoData?: boolean
+  /** How confidently listings match the search query. */
+  matchConfidence?: MatchConfidence
+  /** Distinct product titles when confidence is not high — user should confirm variant. */
+  alternateMatches?: ProductMatchCandidate[]
+  /** User-confirmed canonical title for this comparison. */
+  confirmedTitle?: string
 }
 
 export type HistoryPoint = {
   date: string
   price: number
+  platformId?: PlatformId
 }
 
 /* ── Watchlist page types ── */
@@ -131,6 +153,8 @@ export type AlertPageItem = {
   isActive: boolean
   createdAt: string
   lastTriggeredAt: string | null
+  lastDeliveryStatus?: string | null
+  lastDeliveryError?: string | null
 }
 
 /* ── Trending search types ── */

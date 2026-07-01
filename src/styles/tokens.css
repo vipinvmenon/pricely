@@ -15,7 +15,7 @@
   /* ── Text ── */
   --text: #F4F4F6;
   --text-dim: #8A8F98;
-  --text-faint: #4A4F58;
+  --text-faint: #6E7380;
   /* Contract aliases — text roles */
   --text-primary: var(--text);
   --text-secondary: var(--text-dim);

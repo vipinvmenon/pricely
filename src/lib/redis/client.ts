@@ -25,3 +25,44 @@ export async function cacheDel(key: string): Promise<void> {
   if (!redis) return
   await redis.del(key).catch(() => null)
 }
+
+const memoryRateBuckets = new Map<string, { count: number; resetAt: number }>()
+
+function memoryRateLimitConsume(
+  key: string,
+  limit: number,
+  windowSeconds: number,
+): { allowed: boolean; remaining: number } {
+  const now = Date.now()
+  const bucket = memoryRateBuckets.get(key)
+  if (!bucket || bucket.resetAt <= now) {
+    memoryRateBuckets.set(key, { count: 1, resetAt: now + windowSeconds * 1000 })
+    return { allowed: true, remaining: limit - 1 }
+  }
+
+  bucket.count += 1
+  return {
+    allowed: bucket.count <= limit,
+    remaining: Math.max(0, limit - bucket.count),
+  }
+}
+
+export async function rateLimitConsume(
+  key: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<{ allowed: boolean; remaining: number }> {
+  if (!redis) {
+    return memoryRateLimitConsume(key, limit, windowSeconds)
+  }
+
+  const count = await redis.incr(key).catch(() => 1)
+  if (count === 1) {
+    await redis.expire(key, windowSeconds).catch(() => null)
+  }
+
+  return {
+    allowed: count <= limit,
+    remaining: Math.max(0, limit - count),
+  }
+}

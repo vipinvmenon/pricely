@@ -20,6 +20,11 @@ export const DEFAULT_CITY: City = 'mumbai'
 
 export const DEFAULT_COMPARE_QUERY = 'sony wh-1000xm5'
 
+/** How often active price alerts are checked in production cron. */
+export const ALERT_CHECK_INTERVAL_MINUTES = 15
+
+export const ALERT_CHECK_INTERVAL_LABEL = `every ${ALERT_CHECK_INTERVAL_MINUTES} minutes`
+
 /** Returns true when the value is a recognised, serviceable city slug. */
 export function isSupportedCity(value: string): value is City {
   return (SUPPORTED_CITIES as readonly string[]).includes(value)

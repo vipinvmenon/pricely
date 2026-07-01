@@ -3,12 +3,16 @@ import { cacheGet, cacheSetex } from '@/lib/redis/client'
 import { keys, TTL } from '@/lib/redis/keys'
 import { normalizeQuery } from '@/lib/utils/format'
 import { deriveProductId } from '@/lib/utils/productId'
-import { bestProductTitle, pickBestPerPlatform } from '@/lib/utils/productMatch'
+import { bestProductTitle, computeMatchConfidence, pickBestPerPlatform } from '@/lib/utils/productMatch'
 import { platformName, SUPPORTED_PLATFORM_IDS } from '@/lib/utils/platforms'
 import { priceHistoryService } from './priceHistoryService'
-import type { CompareResponse } from '@/types'
+import type { CompareResponse, ScrapeResult } from '@/types'
 
 const RETAIL_PLATFORMS = SUPPORTED_PLATFORM_IDS
+
+function isPurchasable(result: ScrapeResult): boolean {
+  return result.stock !== 'out_of_stock'
+}
 
 async function persistProduct(
   productId: string,
@@ -18,9 +22,6 @@ async function persistProduct(
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return
 
   const { productsService } = await import('./productsService')
-  // Category is intentionally omitted: a fresh scrape can't reliably classify a
-  // product, so we preserve any previously-stored category (or the DB default)
-  // instead of forcing every product to "electronics".
   await productsService.upsertProduct({
     id:    productId,
     title,
@@ -28,29 +29,49 @@ async function persistProduct(
   })
 }
 
+export type CompareOptions = {
+  /** Skip Redis cache and re-scrape retailers. */
+  bypassCache?: boolean
+}
+
 export async function compare(
   query: string,
   city: string,
   stableProductId?: string,
+  confirmedTitle?: string,
+  options?: CompareOptions,
 ): Promise<CompareResponse> {
   const searchQuery = normalizeQuery(query)
-  const queryCacheKey = keys.compareQuery(searchQuery, city)
-  const cachedByQuery = await cacheGet<CompareResponse>(queryCacheKey)
-  if (cachedByQuery) return cachedByQuery
+  const queryCacheKey = keys.compareQuery(
+    confirmedTitle ? `${searchQuery}::${normalizeQuery(confirmedTitle)}` : searchQuery,
+    city,
+  )
 
-  if (stableProductId) {
-    const cachedById = await cacheGet<CompareResponse>(keys.compare(stableProductId, city))
-    if (cachedById) return cachedById
+  if (!options?.bypassCache) {
+    const cachedByQuery = await cacheGet<CompareResponse>(queryCacheKey)
+    if (cachedByQuery) return cachedByQuery
+
+    if (stableProductId) {
+      const cachedById = await cacheGet<CompareResponse>(keys.compare(stableProductId, city))
+      if (cachedById) return cachedById
+    }
   }
 
   const { results, errors } = await scraperClient.scrape({
     query: searchQuery, platforms: RETAIL_PLATFORMS, city, maxResults: 5,
   })
 
-  const matched = pickBestPerPlatform(results, searchQuery)
-    .sort((a, b) => a.price - b.price)
+  const matchQuery = confirmedTitle?.trim() || searchQuery
+  const matched = pickBestPerPlatform(results, matchQuery)
+  const { confidence: matchConfidence, alternateMatches } = computeMatchConfidence(
+    results,
+    searchQuery,
+    matched,
+  )
+  const inStock = matched.filter(isPurchasable).sort((a, b) => a.price - b.price)
+  const outOfStock = matched.filter((r) => !isPurchasable(r))
 
-  const pricedRetailers = matched.map((r, i) => ({
+  const pricedRetailers = inStock.map((r, i) => ({
     rank:      i + 1,
     name:      platformName(r.platformId),
     isLowest:  i === 0,
@@ -63,11 +84,24 @@ export async function compare(
     buyUrl:    r.url,
   }))
 
-  const matchedIds = new Set(matched.map(r => r.platformId))
+  const unavailableRetailers = outOfStock.map((r, i) => ({
+    rank:      pricedRetailers.length + i + 1,
+    name:      platformName(r.platformId),
+    isLowest:  false,
+    available: false,
+    price:     r.price,
+    mrp:       r.mrp,
+    delivery:  r.delivery ?? '',
+    returns:   r.returns ?? '',
+    stock:     r.stock,
+    buyUrl:    r.url,
+  }))
+
+  const matchedIds = new Set(matched.map((r) => r.platformId))
   const unlistedRetailers = RETAIL_PLATFORMS
-    .filter(id => !matchedIds.has(id))
+    .filter((id) => !matchedIds.has(id))
     .map((id, i) => ({
-      rank:      pricedRetailers.length + i + 1,
+      rank:      pricedRetailers.length + unavailableRetailers.length + i + 1,
       name:      platformName(id),
       isLowest:  false,
       available: false,
@@ -78,12 +112,14 @@ export async function compare(
       buyUrl:    '',
     }))
 
-  const retailers = [...pricedRetailers, ...unlistedRetailers]
-  const title = bestProductTitle(matched, searchQuery)
+  const retailers = [...pricedRetailers, ...unavailableRetailers, ...unlistedRetailers]
+  const title = confirmedTitle?.trim() || bestProductTitle(matched, matchQuery)
   const productId = stableProductId ?? deriveProductId(title)
 
+  await persistProduct(productId, title, searchQuery)
+
   await priceHistoryService.writePricePoints(
-    matched.map((r) => ({
+    inStock.map((r) => ({
       productId,
       platformId: r.platformId,
       city,
@@ -91,10 +127,8 @@ export async function compare(
     })),
   )
 
-  const history = await priceHistoryService.getPriceHistory(productId, city, 90)
+  const historyBundle = await priceHistoryService.getPriceHistory(productId, city, 90)
 
-  // We can't classify a product from a scrape, so reuse the stored category for
-  // a known product and fall back to "unknown" rather than guessing.
   let category = 'unknown'
   if (stableProductId) {
     const { productsService } = await import('./productsService')
@@ -110,11 +144,15 @@ export async function compare(
       category,
     },
     retailers,
-    history,
+    history: historyBundle.dailyLowest,
+    historyByPlatform: historyBundle.byPlatform,
     errors,
+    fetchedAt: new Date().toISOString(),
+    matchConfidence,
+    alternateMatches: alternateMatches.length > 0 ? alternateMatches : undefined,
+    confirmedTitle: confirmedTitle?.trim() || undefined,
   }
 
-  await persistProduct(productId, title, searchQuery)
   await cacheSetex(keys.compare(productId, city), TTL.compare, response)
   await cacheSetex(queryCacheKey, TTL.compare, response)
   return response
@@ -149,7 +187,7 @@ async function compareFromHistory(
   city: string,
   product: { title: string | null; category: string | null } | null,
 ): Promise<CompareResponse> {
-  const history = await priceHistoryService.getPriceHistory(productId, city, 90)
+  const historyBundle = await priceHistoryService.getPriceHistory(productId, city, 90)
   return {
     product: {
       id:       productId,
@@ -158,7 +196,8 @@ async function compareFromHistory(
       category: product?.category ?? 'unknown',
     },
     retailers: [],
-    history,
+    history: historyBundle.dailyLowest,
+    historyByPlatform: historyBundle.byPlatform,
     errors: [],
   }
 }

@@ -36,6 +36,8 @@ export async function getAlerts(userId: string): Promise<AlertPageItem[]> {
     isActive:        row.is_active,
     createdAt:       row.created_at,
     lastTriggeredAt: row.last_triggered_at,
+    lastDeliveryStatus: (row as Alert & { last_delivery_status?: string | null }).last_delivery_status ?? null,
+    lastDeliveryError: (row as Alert & { last_delivery_error?: string | null }).last_delivery_error ?? null,
   }))
 }
 
@@ -67,6 +69,25 @@ export async function deleteAlert(id: string, userId: string): Promise<void> {
   await supabase.from('alerts').delete().eq('id', id).eq('user_id', userId)
 }
 
+export async function updateAlert(
+  id: string,
+  userId: string,
+  patch: { targetPrice?: number; isActive?: boolean },
+): Promise<void> {
+  const supabase = await createClient()
+  const update: { target_price?: number; is_active?: boolean } = {}
+  if (patch.targetPrice !== undefined) update.target_price = patch.targetPrice
+  if (patch.isActive !== undefined) update.is_active = patch.isActive
+
+  const { error } = await supabase
+    .from('alerts')
+    .update(update)
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (error) throw error
+}
+
 export async function getActiveAlerts(): Promise<AlertWithUser[]> {
   // auth.users is not in the public schema — join via PostgREST doesn't work.
   // Use auth admin API to resolve emails after fetching alert rows.
@@ -95,18 +116,47 @@ export async function getActiveAlerts(): Promise<AlertWithUser[]> {
   }))
 }
 
-export async function markAlertTriggered(id: string): Promise<void> {
+export async function markAlertDelivered(id: string, messageId: string): Promise<void> {
   const supabase = createServiceClient()
-  await supabase
+  const { error } = await supabase
     .from('alerts')
-    .update({ last_triggered_at: new Date().toISOString(), is_active: false })
+    .update({
+      last_triggered_at: new Date().toISOString(),
+      is_active: false,
+      last_delivery_status: 'delivered',
+      last_delivery_error: null,
+      last_delivery_message_id: messageId,
+    })
     .eq('id', id)
+
+  if (error) throw error
+}
+
+export async function recordDeliveryFailure(id: string, message: string): Promise<void> {
+  const supabase = createServiceClient()
+  const { error } = await supabase
+    .from('alerts')
+    .update({
+      last_delivery_status: 'failed',
+      last_delivery_error: message.slice(0, 500),
+    })
+    .eq('id', id)
+
+  if (error) throw error
+}
+
+/** @deprecated Use markAlertDelivered after verified email delivery. */
+export async function markAlertTriggered(id: string): Promise<void> {
+  await markAlertDelivered(id, 'legacy-no-message-id')
 }
 
 export const alertsService = {
   getAlerts,
   createAlert,
   deleteAlert,
+  updateAlert,
   getActiveAlerts,
+  markAlertDelivered,
+  recordDeliveryFailure,
   markAlertTriggered,
 }

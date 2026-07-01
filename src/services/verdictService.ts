@@ -10,6 +10,10 @@ const MIN_POINTS_FOR_CONFIDENT = 14
 /** Confidence ceiling for the ambiguous GPT / no-signal fallback. */
 const FALLBACK_CONFIDENCE_CAP = 0.7
 
+function distinctDays(history: HistoryPoint[]): number {
+  return new Set(history.map((point) => point.date)).size
+}
+
 export async function computeVerdict(history: HistoryPoint[]): Promise<Verdict> {
   if (history.length === 0) {
     return {
@@ -19,7 +23,7 @@ export async function computeVerdict(history: HistoryPoint[]): Promise<Verdict> 
     }
   }
 
-  if (history.length < MIN_POINTS_FOR_CONFIDENT) {
+  if (distinctDays(history) < MIN_POINTS_FOR_CONFIDENT) {
     return sparseVerdict(history)
   }
 
@@ -55,7 +59,7 @@ function sparseVerdict(history: HistoryPoint[]): Verdict {
   const current = prices[prices.length - 1]
   const min     = Math.min(...prices)
   const vsMin   = min > 0 ? (current - min) / min : 0
-  const days    = history.length
+  const days    = distinctDays(history)
 
   if (vsMin <= 0.02) {
     return {

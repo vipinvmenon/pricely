@@ -15,6 +15,14 @@ const STEALTH_INIT = `
   window.chrome = { runtime: {} };
 `
 
+const MAX_POOL_SIZE = Math.max(
+  1,
+  Number.parseInt(process.env.SCRAPER_BROWSER_POOL_SIZE ?? '2', 10) || 2,
+)
+
+const idleBrowsers: Browser[] = []
+const busyBrowsers = new Set<Browser>()
+
 function baseLaunchOptions(): LaunchOptions {
   const proxyUrl = process.env.SCRAPER_PROXY_URL
 
@@ -60,6 +68,39 @@ async function launchBrowser(): Promise<Browser> {
   throw new Error(`Unable to launch browser (${errors.join('; ')})`)
 }
 
+async function acquireBrowser(): Promise<Browser> {
+  while (idleBrowsers.length > 0) {
+    const browser = idleBrowsers.pop()
+    if (!browser) break
+    if (browser.isConnected()) {
+      busyBrowsers.add(browser)
+      return browser
+    }
+  }
+
+  if (busyBrowsers.size < MAX_POOL_SIZE) {
+    const browser = await launchBrowser()
+    busyBrowsers.add(browser)
+    return browser
+  }
+
+  // Pool saturated — use an ephemeral browser rather than blocking the scrape queue.
+  return launchBrowser()
+}
+
+async function releaseBrowser(browser: Browser, pooled: boolean): Promise<void> {
+  busyBrowsers.delete(browser)
+
+  if (!browser.isConnected()) return
+
+  if (pooled && idleBrowsers.length < MAX_POOL_SIZE) {
+    idleBrowsers.push(browser)
+    return
+  }
+
+  await browser.close()
+}
+
 export interface BrowserSession {
   browser: Browser
   context: import('playwright').BrowserContext
@@ -67,7 +108,7 @@ export interface BrowserSession {
 }
 
 export async function createBrowserSession(): Promise<BrowserSession> {
-  const browser = await launchBrowser()
+  const browser = await acquireBrowser()
   const context = await browser.newContext({
     userAgent: CHROME_UA,
     viewport: { width: 1280, height: 800 },
@@ -87,12 +128,25 @@ export async function createBrowserSession(): Promise<BrowserSession> {
 export async function withBrowserPage<T>(
   fn: (page: Page) => Promise<T>,
 ): Promise<T> {
-  const session = await createBrowserSession()
+  const browser = await acquireBrowser()
+  const pooled = busyBrowsers.has(browser)
+  const context = await browser.newContext({
+    userAgent: CHROME_UA,
+    viewport: { width: 1280, height: 800 },
+    locale: 'en-IN',
+    timezoneId: 'Asia/Kolkata',
+    extraHTTPHeaders: {
+      'Accept-Language': 'en-IN,en;q=0.9',
+    },
+  })
+
   try {
-    return await fn(session.page)
+    await context.addInitScript(STEALTH_INIT)
+    const page = await context.newPage()
+    return await fn(page)
   } finally {
-    await session.context.close()
-    await session.browser.close()
+    await context.close()
+    await releaseBrowser(browser, pooled)
   }
 }
 

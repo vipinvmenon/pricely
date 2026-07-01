@@ -46,7 +46,10 @@ create table if not exists public.alerts (
   target_price      numeric     not null check (target_price >= 0),
   is_active         boolean     not null default true,
   created_at        timestamptz not null default now(),
-  last_triggered_at timestamptz
+  last_triggered_at timestamptz,
+  last_delivery_status text,
+  last_delivery_error text,
+  last_delivery_message_id text
 );
 create index if not exists alerts_user_id_idx     on public.alerts(user_id);
 create index if not exists alerts_product_city_idx on public.alerts(product_id, city);

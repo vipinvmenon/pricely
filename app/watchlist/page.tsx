@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import useSWR, { useSWRConfig } from "swr";
 import { Nav } from "@/components/layout/Nav";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { Glass } from "@/components/ui/Glass";
 import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
+import { LoadingState, ErrorState } from "@/components/ui/LoadingState";
 import { WatchlistRow } from "@/components/ui/WatchlistRow";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -62,6 +64,8 @@ export default function WatchlistPage() {
 	// Flush any pending watchlist items buffered while unauthenticated
 	usePendingWatchlist(Boolean(userId) && !isLoading && !error);
 
+	const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
+
 	async function handleRemove(id: string) {
 		const optimistic = (data ?? []).filter((item) => item.id !== id);
 		await mutate(WATCHLIST_KEY, optimistic, { revalidate: false });
@@ -71,6 +75,7 @@ export default function WatchlistPage() {
 			});
 		} finally {
 			await mutate(WATCHLIST_KEY);
+			setRemoveConfirmId(null);
 		}
 	}
 
@@ -131,7 +136,7 @@ export default function WatchlistPage() {
 							Tracking quietly.{" "}
 							{totalSaved > 0 && (
 								<span style={{ color: "var(--accent)" }}>
-									Saved ₹{totalSaved.toLocaleString("en-IN")}
+									₹{totalSaved.toLocaleString("en-IN")} observed vs listed MRP
 								</span>
 							)}
 						</h1>
@@ -144,7 +149,8 @@ export default function WatchlistPage() {
 					</Link>
 				</div>
 
-				{/* Stats row */}
+				{/* Stats row — only for signed-in users with data */}
+				{!isUnauthenticated && items.length > 0 && (
 				<div
 					style={{
 						display: "grid",
@@ -165,33 +171,25 @@ export default function WatchlistPage() {
 						sub="items"
 					/>
 					<StatCard
-						label="Total Saved"
+						label="Observed vs MRP"
 						value={
 							totalSaved > 0 ? `₹${totalSaved.toLocaleString("en-IN")}` : "—"
 						}
-						sub="vs. MRP"
+						sub="listed price drop"
 					/>
 					<StatCard
-						label="Tracked"
+						label="Target hit"
 						value={String(
 							items.filter((i) => i.status === "Target hit").length,
 						)}
-						sub="target hit"
+						sub="alerts reached"
 					/>
 				</div>
+				)}
 
 				{/* Content area */}
 				{showLoading ? (
-					<div
-						style={{
-							textAlign: "center",
-							padding: 60,
-							color: "var(--text-faint)",
-							fontFamily: "var(--font-mono)",
-						}}
-					>
-						Loading…
-					</div>
+					<LoadingState label="Loading watchlist…" />
 				) : error ? (
 					<Glass
 						variant="plate"
@@ -201,14 +199,10 @@ export default function WatchlistPage() {
 							borderRadius: "var(--r-lg)",
 						}}
 					>
-						<p style={{ color: "var(--text-dim)", marginBottom: 24 }}>
-							Could not load your watchlist. Try signing in again.
-						</p>
-						<a href="/signin" style={{ textDecoration: "none" }}>
-							<Button variant="primary" size="md" type="button">
-								Sign in
-							</Button>
-						</a>
+						<ErrorState
+							message="Could not load your watchlist. Try signing in again."
+							onRetry={() => void mutate(WATCHLIST_KEY)}
+						/>
 					</Glass>
 				) : isUnauthenticated ? (
 					<Glass
@@ -255,6 +249,7 @@ export default function WatchlistPage() {
 					>
 						{/* Table header */}
 						<div
+							className="compare-table-header"
 							style={{
 								display: "grid",
 								gridTemplateColumns: "1fr auto auto auto auto auto",
@@ -298,12 +293,17 @@ export default function WatchlistPage() {
 								vsTarget={item.vsTarget}
 								trend={item.trend}
 								status={item.status}
-								onMenu={() => handleRemove(item.id)}
+								onRemoveRequest={() => setRemoveConfirmId(item.id)}
+								removeConfirming={removeConfirmId === item.id}
+								onConfirmRemove={() => void handleRemove(item.id)}
+								onCancelRemove={() => setRemoveConfirmId(null)}
 							/>
 						))}
 					</Glass>
 				)}
 			</section>
+
+			<SiteFooter />
 
 			<style>{`
         @media (max-width: 768px) {

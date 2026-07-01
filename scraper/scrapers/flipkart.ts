@@ -1,5 +1,5 @@
-import { chromium } from 'playwright'
 import type { Scraper, ScraperResult } from '../types'
+import { withBrowserPage } from '../lib/browserContext'
 import { withRetry } from '../lib/retry'
 
 async function searchViaApi(
@@ -52,9 +52,7 @@ async function searchViaApi(
 }
 
 async function searchViaPlaywright(query: string, maxResults: number): Promise<ScraperResult[]> {
-  const browser = await chromium.launch({ headless: true })
-  const page    = await browser.newPage()
-  try {
+  return withBrowserPage(async (page) => {
     await page.goto(`https://www.flipkart.com/search?q=${encodeURIComponent(query)}`, {
       waitUntil: 'domcontentloaded',
       timeout:   25_000,
@@ -124,9 +122,7 @@ async function searchViaPlaywright(query: string, maxResults: number): Promise<S
         returns:    '10 days',
         scrapedAt:  new Date().toISOString(),
       }))
-  } finally {
-    await browser.close()
-  }
+  })
 }
 
 export const flipkart: Scraper = async ({ query, maxResults }) => {

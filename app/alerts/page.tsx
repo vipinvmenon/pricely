@@ -4,12 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import useSWR, { useSWRConfig } from "swr";
 import { Nav } from "@/components/layout/Nav";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { Glass } from "@/components/ui/Glass";
 import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
 import { AlertRow } from "@/components/ui/AlertRow";
+import { LoadingState, ErrorState } from "@/components/ui/LoadingState";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { usePendingAlert } from "@/lib/hooks/usePendingAlert";
 import { fetchJson } from "@/lib/utils/fetchJson";
 import type { AlertPageItem } from "@/types";
 
@@ -60,6 +63,11 @@ export default function AlertsPage() {
 	const isUnauthenticated = supabaseConfigured && authReady && !userId;
 	const showLoading = !authReady || (Boolean(userId) && isLoading);
 
+	const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
+	const [toggleLoadingId, setToggleLoadingId] = useState<string | null>(null);
+
+	usePendingAlert(Boolean(userId) && authReady);
+
 	async function handleDelete(id: string) {
 		const optimistic = (data ?? []).filter((item) => item.id !== id);
 		await mutate(ALERTS_KEY, optimistic, { revalidate: false });
@@ -69,6 +77,25 @@ export default function AlertsPage() {
 			});
 		} finally {
 			await mutate(ALERTS_KEY);
+			setRemoveConfirmId(null);
+		}
+	}
+
+	async function handleToggleActive(id: string, isActive: boolean) {
+		const optimistic = (data ?? []).map((item) =>
+			item.id === id ? { ...item, isActive: !isActive } : item,
+		);
+		setToggleLoadingId(id);
+		await mutate(ALERTS_KEY, optimistic, { revalidate: false });
+		try {
+			await fetchJson("/api/alerts", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ id, isActive: !isActive }),
+			});
+		} finally {
+			await mutate(ALERTS_KEY);
+			setToggleLoadingId(null);
 		}
 	}
 
@@ -158,29 +185,16 @@ export default function AlertsPage() {
 
 				{/* Content */}
 				{showLoading ? (
-					<div
-						style={{
-							textAlign: "center",
-							padding: 60,
-							color: "var(--text-faint)",
-							fontFamily: "var(--font-mono)",
-						}}
-					>
-						Loading…
-					</div>
+					<LoadingState label="Loading alerts…" />
 				) : error ? (
 					<Glass
 						variant="plate"
 						style={{ padding: 48, textAlign: "center", borderRadius: "var(--r-lg)" }}
 					>
-						<p style={{ color: "var(--text-dim)", marginBottom: 24 }}>
-							Could not load your alerts. Try signing in again.
-						</p>
-						<a href="/signin" style={{ textDecoration: "none" }}>
-							<Button variant="primary" size="md" type="button">
-								Sign in
-							</Button>
-						</a>
+						<ErrorState
+							message="Could not load your alerts. Try signing in again."
+							onRetry={() => void mutate(ALERTS_KEY)}
+						/>
 					</Glass>
 				) : isUnauthenticated ? (
 					<Glass
@@ -225,6 +239,7 @@ export default function AlertsPage() {
 					>
 						{/* Table header */}
 						<div
+							className="compare-table-header"
 							style={{
 								display: "grid",
 								gridTemplateColumns: "1fr auto auto auto auto",
@@ -259,12 +274,25 @@ export default function AlertsPage() {
 								isActive={item.isActive}
 								lastTriggeredAt={item.lastTriggeredAt}
 								createdAt={item.createdAt}
-								onDelete={() => void handleDelete(item.id)}
+								lastDeliveryStatus={item.lastDeliveryStatus}
+								lastDeliveryError={item.lastDeliveryError}
+								onRemoveRequest={() => setRemoveConfirmId(item.id)}
+								removeConfirming={removeConfirmId === item.id}
+								onConfirmRemove={() => void handleDelete(item.id)}
+								onCancelRemove={() => setRemoveConfirmId(null)}
+								onToggleActive={
+									!item.lastTriggeredAt
+										? () => void handleToggleActive(item.id, item.isActive)
+										: undefined
+								}
+								toggleLoading={toggleLoadingId === item.id}
 							/>
 						))}
 					</Glass>
 				)}
 			</section>
+
+			<SiteFooter />
 
 			<style>{`
         @media (max-width: 768px) {

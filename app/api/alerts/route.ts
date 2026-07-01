@@ -36,6 +36,14 @@ const DeleteQuerySchema = z.object({
   id: z.string().uuid(),
 })
 
+const PatchBodySchema = z.object({
+  id: z.string().uuid(),
+  targetPrice: z.number().positive().optional(),
+  isActive: z.boolean().optional(),
+}).refine((value) => value.targetPrice !== undefined || value.isActive !== undefined, {
+  message: 'Provide targetPrice or isActive',
+})
+
 export async function GET() {
   const start = Date.now()
 
@@ -104,6 +112,35 @@ export async function POST(request: Request) {
   )
 
   const response = NextResponse.json(result, { status: 201 })
+  response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
+  return response
+}
+
+export async function PATCH(request: Request) {
+  const start = Date.now()
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    return unauthorized()
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return unauthorized()
+  }
+
+  const body = await request.json().catch(() => ({}))
+  const parsed = PatchBodySchema.safeParse(body)
+  if (!parsed.success) {
+    return invalidParams(parsed.error.issues)
+  }
+
+  await alertsService.updateAlert(parsed.data.id, user.id, {
+    targetPrice: parsed.data.targetPrice,
+    isActive: parsed.data.isActive,
+  })
+
+  const response = NextResponse.json({ success: true })
   response.headers.set('X-Response-Time', `${Date.now() - start}ms`)
   return response
 }

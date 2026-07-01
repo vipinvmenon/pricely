@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getSafeNextPath, getGoogleLoginPath } from '@/lib/supabase/authRedirect'
 import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from '@/lib/supabase/config'
 import { formatAuthError } from '@/lib/utils/authErrors'
+import { authInputStyle, authErrorBoxStyle, authLabelStyle } from '@/lib/auth/fieldStyles'
 
 const authAvailable = isSupabaseConfigured()
 
@@ -52,8 +53,13 @@ function SignInForm() {
   const nextPath = getSafeNextPath(searchParams.get('next'))
   const [email, setEmail]           = useState('')
   const [password, setPassword]     = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading]       = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMessage, setResendMessage] = useState<string | null>(null)
   const [error, setError]           = useState<string | null>(urlError)
+
+  const showResendConfirmation = Boolean(error?.includes('Confirm your email'))
 
   async function handleEmailSignIn(e: React.FormEvent) {
     e.preventDefault()
@@ -85,6 +91,34 @@ function SignInForm() {
     setError(null)
     setLoading(true)
     window.location.assign(getGoogleLoginPath(nextPath))
+  }
+
+  async function handleResendConfirmation() {
+    if (!authAvailable) {
+      setError(SUPABASE_SETUP_HINT)
+      return
+    }
+    if (!email.trim()) {
+      setResendMessage('Enter your email above first.')
+      return
+    }
+
+    setResendLoading(true)
+    setResendMessage(null)
+    try {
+      const supabase = createClient()
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+      })
+      if (resendError) {
+        setResendMessage(resendError.message)
+        return
+      }
+      setResendMessage('Confirmation email sent — check your inbox.')
+    } finally {
+      setResendLoading(false)
+    }
   }
 
   return (
@@ -225,23 +259,36 @@ function SignInForm() {
 
           {error && (
             <div
-              style={{
-                background: 'var(--danger-soft)',
-                border: '1px solid var(--danger-border)',
-                borderRadius: 'var(--r-md)',
-                padding: '10px 14px',
-                marginBottom: 16,
-                fontSize: '0.875rem',
-                color: 'var(--danger)',
-              }}
+              role="alert"
+              style={authErrorBoxStyle}
             >
               {error}
             </div>
           )}
 
+          {showResendConfirmation && (
+            <div style={{ marginBottom: 16 }}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                fullWidth
+                disabled={resendLoading || !authAvailable}
+                onClick={() => void handleResendConfirmation()}
+              >
+                {resendLoading ? 'Sending…' : 'Resend confirmation email'}
+              </Button>
+              {resendMessage && (
+                <p role="status" style={{ fontSize: '0.8125rem', color: 'var(--text-dim)', marginTop: 8 }}>
+                  {resendMessage}
+                </p>
+              )}
+            </div>
+          )}
+
           <form onSubmit={handleEmailSignIn} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-dim)' }}>
+              <span style={authLabelStyle}>
                 Email
               </span>
               <input
@@ -252,26 +299,42 @@ function SignInForm() {
                 required
                 disabled={!authAvailable}
                 autoComplete="email"
-                style={inputStyle}
+                style={authInputStyle}
               />
             </label>
 
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-dim)' }}>
+                <span style={authLabelStyle}>
                   Password
                 </span>
+                <Link
+                  href="/forgot-password"
+                  style={{ fontSize: '0.8125rem', color: 'var(--accent)', textDecoration: 'none' }}
+                >
+                  Forgot password?
+                </Link>
               </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                disabled={!authAvailable}
-                autoComplete="current-password"
-                style={inputStyle}
-              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  disabled={!authAvailable}
+                  autoComplete="current-password"
+                  style={{ ...authInputStyle, flex: 1 }}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </Button>
+              </div>
             </label>
 
             <Button type="submit" variant="primary" size="md" fullWidth disabled={loading || !authAvailable}>
@@ -321,17 +384,4 @@ function SignInForm() {
       `}</style>
     </div>
   )
-}
-
-const inputStyle: React.CSSProperties = {
-  background:    'var(--bg3)',
-  border:        '1px solid var(--glass-plate-border)',
-  borderRadius:  'var(--r-pill)',
-  padding:       '10px 14px',
-  color:         'var(--text)',
-  fontSize:      '0.9375rem',
-  fontFamily:    'inherit',
-  outline:       'none',
-  width:         '100%',
-  transition:    'border-color 0.15s',
 }
